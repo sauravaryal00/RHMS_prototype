@@ -7,15 +7,7 @@ export const useRealtimeVitals = (patientId) => {
   const [history, setHistory] = useState([]);
 
   useEffect(() => {
-    // 1. Local listener MUST be first and ALWAYS active
-    const handleLocalUpdate = (e) => {
-      console.log('HOOK_LOCAL_SYNC:', e.detail.hr);
-      setVitals(e.detail);
-      setHistory(prev => [...prev, e.detail].slice(-60));
-    };
-    window.addEventListener('local-vitals-update', handleLocalUpdate);
-
-    // 2. Fetch Initial Data
+    // 1. Initial Data Fetch
     const fetchVitals = async () => {
       if (!supabase) return;
       const { data } = await supabase
@@ -32,7 +24,7 @@ export const useRealtimeVitals = (patientId) => {
     };
     fetchVitals();
 
-    // 3. Cloud Subscription (if available)
+    // 2. Real-time Subscription (Postgres)
     let channel;
     if (supabase) {
       channel = supabase
@@ -47,27 +39,17 @@ export const useRealtimeVitals = (patientId) => {
           setHistory(prev => [...prev, payload.new].slice(-60));
         })
         .subscribe();
-    } else {
-      // Internal Mock Loop (Global fallback)
-      const mockInterval = setInterval(() => {
-        const dummy = {
-          ...mockVitals,
-          timestamp: new Date().toISOString(),
-          hr: Math.round(72 + Math.random() * 10),
-          bp_sys: Math.round(110 + Math.random() * 5),
-          spo2: parseFloat((97 + Math.random() * 2).toFixed(1))
-        };
-        setVitals(dummy);
-        setHistory(prev => [...prev, dummy].slice(-60));
-      }, 5000);
-      return () => {
-        clearInterval(mockInterval);
-        window.removeEventListener('local-vitals-update', handleLocalUpdate);
-      };
     }
 
+    // 3. Local Mock Listener (Triggered ONLY by Simulation Button)
+    const handleLocalUpdate = (e) => {
+      setVitals(e.detail);
+      setHistory(prev => [...prev, e.detail].slice(-60));
+    };
+    window.addEventListener('local-vitals-update', handleLocalUpdate);
+
     return () => {
-      if (channel) supabase.removeChannel(channel);
+      if (channel) supabase?.removeChannel(channel);
       window.removeEventListener('local-vitals-update', handleLocalUpdate);
     };
   }, [patientId]);
