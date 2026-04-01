@@ -55,8 +55,16 @@ export const useRealtimeVitals = (patientId) => {
       })
       .subscribe();
 
+    // Local Simulation Listener (for demo fallback)
+    const handleLocalUpdate = (e) => {
+      setVitals(e.detail);
+      setHistory(prev => [...prev, e.detail].slice(-60));
+    };
+    window.addEventListener('local-vitals-update', handleLocalUpdate);
+
     return () => {
-      supabase.removeChannel(channel);
+      supabase?.removeChannel(channel);
+      window.removeEventListener('local-vitals-update', handleLocalUpdate);
     };
   }, [patientId]);
 

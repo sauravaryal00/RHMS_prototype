@@ -31,7 +31,8 @@ const AdminDashboard = () => {
   // Sensor Simulation Logic
   useEffect(() => {
     let interval;
-    if (isSimulating && supabase) {
+    if (isSimulating) {
+      console.log('SIMULATION_STARTING: Mode', supabase ? 'Cloud' : 'Local_Demo');
       interval = setInterval(async () => {
         const payload = {
           patient_id: 'patient-42',
@@ -42,8 +43,17 @@ const AdminDashboard = () => {
           spo2: parseFloat((96 + Math.random() * 3.5).toFixed(1)),
           timestamp: new Date().toISOString()
         };
-        await supabase.from('vitals').insert([payload]);
-      }, 5000); // Push every 5s
+
+        if (supabase) {
+          const { error } = await supabase.from('vitals').insert([payload]);
+          if (error) console.error('SIM_DB_ERR:', error.message);
+          else console.log('SIM_PUSH: OK', payload.hr);
+        } else {
+          // Local Demo Injection (If no supabase)
+          console.log('SIM_LOCAL: OK', payload.hr);
+          window.dispatchEvent(new CustomEvent('local-vitals-update', { detail: payload }));
+        }
+      }, 3000); 
     }
     return () => clearInterval(interval);
   }, [isSimulating]);
