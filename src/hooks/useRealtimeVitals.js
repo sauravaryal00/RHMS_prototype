@@ -7,66 +7,70 @@ export const useRealtimeVitals = (patientId) => {
   const [history, setHistory] = useState([]);
 
   useEffect(() => {
-    if (!supabase) {
-      // Fallback to simulation if Supabase is not configured
-      const interval = setInterval(() => {
-        const newVitals = {
-          ...mockVitals,
-          timestamp: new Date().toISOString(),
-          hr: Math.round(72 + Math.random() * 15),
-          bp_sys: Math.round(115 + Math.random() * 15),
-          bp_dia: Math.round(75 + Math.random() * 10),
-          spo2: parseFloat((96 + Math.random() * 3.5).toFixed(1))
-        };
-        setVitals(newVitals);
-        setHistory(prev => [...prev, newVitals].slice(-60));
-      }, 2000);
-      return () => clearInterval(interval);
-    }
+    // 1. Local listener MUST be first and ALWAYS active
+    const handleLocalUpdate = (e) => {
+      console.log('HOOK_LOCAL_SYNC:', e.detail.hr);
+      setVitals(e.detail);
+      setHistory(prev => [...prev, e.detail].slice(-60));
+    };
+    window.addEventListener('local-vitals-update', handleLocalUpdate);
 
-    // Real Supabase Implementation
+    // 2. Fetch Initial Data
     const fetchVitals = async () => {
-      const { data, error } = await supabase
+      if (!supabase) return;
+      const { data } = await supabase
         .from('vitals')
         .select('*')
         .eq('patient_id', patientId)
         .order('timestamp', { ascending: false })
         .limit(60);
 
-      if (data) {
-        setVitals(data[0] || mockVitals);
+      if (data && data.length > 0) {
+        setVitals(data[0]);
         setHistory(data.reverse());
       }
     };
-
     fetchVitals();
 
-    // Subscribe to real-time updates
-    const channel = supabase
-      .channel('vitals-realtime')
-      .on('postgres_changes', { 
-        event: 'INSERT', 
-        schema: 'public', 
-        table: 'vitals',
-        filter: `patient_id=eq.${patientId}`
-      }, (payload) => {
-        setVitals(payload.new);
-        setHistory(prev => [...prev, payload.new].slice(-60));
-      })
-      .subscribe();
-
-    // Local Simulation Listener (for demo fallback)
-    const handleLocalUpdate = (e) => {
-      setVitals(e.detail);
-      setHistory(prev => [...prev, e.detail].slice(-60));
-    };
-    window.addEventListener('local-vitals-update', handleLocalUpdate);
+    // 3. Cloud Subscription (if available)
+    let channel;
+    if (supabase) {
+      channel = supabase
+        .channel('vitals-realtime')
+        .on('postgres_changes', { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'vitals',
+          filter: `patient_id=eq.${patientId}`
+        }, (payload) => {
+          setVitals(payload.new);
+          setHistory(prev => [...prev, payload.new].slice(-60));
+        })
+        .subscribe();
+    } else {
+      // Internal Mock Loop (Global fallback)
+      const mockInterval = setInterval(() => {
+        const dummy = {
+          ...mockVitals,
+          timestamp: new Date().toISOString(),
+          hr: Math.round(72 + Math.random() * 10),
+          bp_sys: Math.round(110 + Math.random() * 5),
+          spo2: parseFloat((97 + Math.random() * 2).toFixed(1))
+        };
+        setVitals(dummy);
+        setHistory(prev => [...prev, dummy].slice(-60));
+      }, 5000);
+      return () => {
+        clearInterval(mockInterval);
+        window.removeEventListener('local-vitals-update', handleLocalUpdate);
+      };
+    }
 
     return () => {
-      supabase?.removeChannel(channel);
+      if (channel) supabase.removeChannel(channel);
       window.removeEventListener('local-vitals-update', handleLocalUpdate);
     };
   }, [patientId]);
 
-  return { vitals, history, connectionStatus: supabase ? 'Connected (Cloud)' : 'Simulated', protocol: 'WSS/TLS', port: 443 };
+  return { vitals, history, connectionStatus: supabase ? 'Connected (Cloud)' : 'Local Demo', protocol: 'WSS/TLS', port: 443 };
 };
