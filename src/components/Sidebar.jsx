@@ -11,18 +11,20 @@ import {
   BarChart3, 
   Activity, 
   Settings,
-  LogOut
+  LogOut,
+  Terminal
 } from 'lucide-react';
 import { roles } from '../utils/mockData';
 
 const Sidebar = ({ role = 'admin' }) => {
   const navItems = [
     { name: 'System Overview', path: '/admin', icon: Home, roles: ['admin'] },
+    { name: 'Deep Analysis', path: '/terminal', icon: Terminal, roles: ['admin'] },
     { name: 'Patient Card', path: '/patient', icon: User, roles: ['patient', 'admin'] },
     { name: 'Clinician Portal', path: '/clinician', icon: Stethoscope, roles: ['clinician', 'admin'] },
     { name: 'Caregiver Flow', path: '/caregiver', icon: Users, roles: ['caregiver', 'admin'] },
     { name: 'Audit Log', path: '/audit', icon: FileSearch, roles: ['admin', 'clinician'] },
-    { name: 'Anomalies', path: '/anomalies', icon: ShieldAlert, roles: ['admin'], disabled: true },
+    { name: 'Anomalies', path: '/anomalies', icon: ShieldAlert, roles: ['admin'] },
     { name: 'Baselines', path: '/baselines', icon: Activity, roles: ['admin'], disabled: true },
     { name: 'Experiments', path: '/experiments', icon: BarChart3, roles: ['admin'], disabled: true },
     { name: 'Settings', path: '/settings', icon: Settings, roles: ['admin'] },

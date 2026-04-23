@@ -155,6 +155,32 @@ export const useConsentTokens = (patientId = null) => {
     await logEvent('REQUEST_DENIED', req.patient_id, 'patient-42', 'patient', 'deny', req.purpose, req.scope);
   };
 
+  const escalateToCaregiver = async (requestId) => {
+    const req = requests.find(r => r.id === requestId);
+    if (!req || !supabase) return;
+
+    setOptimisticLocks(prev => ({ ...prev, [requestId]: { status: 'pending_caregiver', timestamp: Date.now() } }));
+    
+    // Fallback: Append [AUTO-ESCALATED] to purpose so caregiver knows even without the new column
+    const newPurpose = `[PATIENT_UNRESPONSIVE] ${req.purpose}`;
+
+    // Try updating status and purpose (safe columns) first
+    const { error } = await supabase.from('access_requests').update({ 
+      status: 'pending_caregiver',
+      purpose: newPurpose
+    }).eq('id', requestId);
+
+    // Try updating the new column separately - if it fails, the status update above still worked
+    await supabase.from('access_requests').update({ 
+      is_auto_escalated: true 
+    }).eq('id', requestId);
+
+    if (!error) {
+      await logEvent('AUTO_ESCALATION', req.patient_id, 'SYSTEM', 'security_manager', 'escalate', req.purpose, req.scope);
+      fetchAll();
+    }
+  };
+
   const revokeToken = async (tokenId) => {
     if (supabase) {
       await supabase.from('consent_tokens').update({ revoked: true }).eq('token_id', tokenId);
@@ -162,5 +188,5 @@ export const useConsentTokens = (patientId = null) => {
     }
   };
 
-  return { tokens, requests, logs, requestAccess, approveAsPatient, approveAsCaregiver, denyRequest, revokeToken };
+  return { tokens, requests, logs, requestAccess, approveAsPatient, approveAsCaregiver, denyRequest, escalateToCaregiver, revokeToken };
 };

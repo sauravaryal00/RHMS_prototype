@@ -17,8 +17,12 @@ import { useAuditLogs } from '../hooks/useAuditLogs';
 import CountdownTimer from '../components/CountdownTimer';
 
 const PatientDashboard = () => {
-  const { tokens, requests, logs, approveAsPatient, denyRequest, revokeToken } = useConsentTokens('patient-42');
+  const { tokens, requests, logs, approveAsPatient, denyRequest, escalateToCaregiver, revokeToken } = useConsentTokens('patient-42');
   
+  const [escalationTimer, setEscalationTimer] = useState(15);
+  const [isEscalating, setIsEscalating] = useState(false);
+  const [activeReqId, setActiveReqId] = useState(null);
+
   useEffect(() => {
     console.log('PATIENT_SYNC: Detected', requests?.length, 'active requests');
   }, [requests]);
@@ -27,11 +31,36 @@ const PatientDashboard = () => {
   const [requestStatus, setRequestStatus] = useState('pending'); // pending, allowed, denied
 
   useEffect(() => {
-    console.log('PATIENT_DEBUG: Requests state changed', requests);
     if (requests && requests.length > 0) {
-      console.log('PATIENT_DEBUG: Request 0 status:', requests[0].status);
+      const pendingReq = requests.find(r => r.status === 'pending');
+      if (pendingReq && pendingReq.id !== activeReqId) {
+        setActiveReqId(pendingReq.id);
+        setEscalationTimer(15);
+      } else if (!pendingReq) {
+        setActiveReqId(null);
+      }
+    } else {
+      setActiveReqId(null);
     }
-  }, [requests]);
+  }, [requests, activeReqId]);
+
+  useEffect(() => {
+    let interval;
+    const pendingReq = requests?.find(r => r.status === 'pending');
+    
+    if (pendingReq && escalationTimer > 0) {
+      interval = setInterval(() => {
+        setEscalationTimer(prev => prev - 1);
+      }, 1000);
+    } else if (pendingReq && escalationTimer === 0 && !isEscalating) {
+      setIsEscalating(true);
+      escalateToCaregiver(pendingReq.id).then(() => {
+        setIsEscalating(false);
+      });
+    }
+
+    return () => clearInterval(interval);
+  }, [requests, escalationTimer, isEscalating]);
 
   const isHighRiskPurpose = (req) => {
     if (!req) return false;
@@ -73,6 +102,7 @@ const PatientDashboard = () => {
           <div>
             <h1 className="text-5xl font-black mb-4 tracking-tight">Privacy Center</h1>
             <p className="text-xl text-muted">You are in full control of who sees your health data.</p>
+            <div className="text-[10px] bg-primary/20 text-primary px-2 py-1 rounded w-fit mt-4 font-mono">DEBUG: PATIENT_DASHBOARD_OK | ID: patient-42 | TIMER: {escalationTimer}s</div>
           </div>
           <div className="flex flex-col items-end gap-2">
             <div className="px-4 py-2 glass rounded-2xl flex items-center gap-3 border border-success/30">
@@ -127,6 +157,14 @@ const PatientDashboard = () => {
                 </div>
 
                 <div className="w-full md:w-80 space-y-4">
+                  <div className="mb-6 p-4 bg-danger/10 border border-danger/30 rounded-2xl text-center">
+                    <div className="text-xs text-danger font-bold uppercase tracking-widest mb-1">Response Required In</div>
+                    <div className="text-4xl font-black text-danger font-mono">
+                      {escalationTimer}s
+                    </div>
+                    <div className="text-[10px] text-danger/70 mt-1 uppercase">Auto-Escalating to Caregiver</div>
+                  </div>
+
                   <button 
                     onClick={() => handleAllow(currentRequest.id)}
                     className="w-full h-24 bg-success/20 text-success border-2 border-success/30 hover:bg-success hover:text-white rounded-2xl flex items-center justify-center gap-4 text-2xl font-bold transition-all"

@@ -19,6 +19,13 @@ import { useConsentTokens } from '../hooks/useConsentTokens';
 import CountdownTimer from '../components/CountdownTimer';
 
 const ClinicianDashboard = () => {
+  const clinicians = [
+    { id: 'dr_sharma', name: 'Dr. Priya Sharma', role: 'Cardiologist', dept: 'Cardiology' },
+    { id: 'dr_kumar', name: 'Dr. Rajesh Kumar', role: 'Neurologist', dept: 'Neurology' },
+    { id: 'dr_jenkins', name: 'Dr. Sarah Jenkins', role: 'ER Specialist', dept: 'Emergency' }
+  ];
+
+  const [selectedClinician, setSelectedClinician] = useState(clinicians[0]);
   const [isRequesting, setIsRequesting] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
   const [validationStep, setValidationStep] = useState(0);
@@ -30,9 +37,9 @@ const ClinicianDashboard = () => {
   const { vitals, history, connectionStatus } = useRealtimeVitals(patientId);
 
   // Check for active token or pending request
-  const activeToken = tokens?.find(t => t.clinician_id === 'dr_sharma' && !t.revoked && t.patient_id === patientId);
+  const activeToken = tokens?.find(t => t.clinician_id === selectedClinician.id && !t.revoked && t.patient_id === patientId);
   const pendingRequest = requests?.find(r => 
-    r.clinician_id === 'dr_sharma' && 
+    r.clinician_id === selectedClinician.id && 
     r.patient_id === patientId && 
     (r.status === 'pending' || r.status === 'pending_caregiver')
   );
@@ -55,9 +62,9 @@ const ClinicianDashboard = () => {
     try {
       await requestAccess(
         patientId, 
-        'dr_sharma', 
-        'Dr. Priya Sharma', 
-        'Cardiologist', 
+        selectedClinician.id, 
+        selectedClinician.name, 
+        selectedClinician.role, 
         purpose, 
         ['Heart Rate', 'Blood Pressure', 'Oxygen Levels'], 
         duration
@@ -97,7 +104,8 @@ const ClinicianDashboard = () => {
       <main className="flex-1 ml-64 p-8">
         <header className="mb-8">
           <h1 className="text-3xl font-bold font-outfit">Clinician Portal</h1>
-          <p className="text-muted">Cardiology Department | Dr. Priya Sharma</p>
+          <p className="text-muted">{selectedClinician.dept} Department | {selectedClinician.name}</p>
+          <div className="text-[10px] bg-primary/20 text-primary px-2 py-1 rounded w-fit mt-2 font-mono">DEBUG: COMPONENT_RENDERED_OK | DOCTOR: {selectedClinician.id}</div>
         </header>
 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
@@ -121,6 +129,19 @@ const ClinicianDashboard = () => {
                       className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2 focus:outline-none focus:border-primary/50 text-sm"
                     />
                   </div>
+                </div>
+
+                <div>
+                  <label className="text-[10px] text-muted uppercase font-bold tracking-widest block mb-2">Select Clinician</label>
+                  <select 
+                    value={selectedClinician.id}
+                    onChange={(e) => setSelectedClinician(clinicians.find(c => c.id === e.target.value))}
+                    className="w-full bg-surface border border-white/10 rounded-xl px-4 py-2 focus:outline-none focus:border-primary/50 text-sm appearance-none"
+                  >
+                    {clinicians.map(c => (
+                      <option key={c.id} value={c.id}>{c.name} ({c.role})</option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>

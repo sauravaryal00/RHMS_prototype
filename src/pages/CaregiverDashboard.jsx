@@ -70,7 +70,7 @@ const CaregiverDashboard = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
           {/* Main Action Area */}
-          <div className="glass p-8 rounded-[2.5rem] border-primary/20 min-h-[500px] flex flex-col">
+          <div className={`glass p-8 rounded-[2.5rem] border-primary/20 min-h-[500px] flex flex-col transition-all duration-500 ${pendingCoApproval?.is_auto_escalated ? 'border-danger shadow-[0_0_50px_rgba(239,68,68,0.1)] ring-2 ring-danger/20' : ''}`}>
             {!pendingCoApproval ? (
               <div className="flex-1 flex flex-col items-center justify-center text-center p-12">
                 <div className="w-24 h-24 rounded-full bg-success/10 flex items-center justify-center text-success mb-6">
@@ -89,8 +89,19 @@ const CaregiverDashboard = () => {
                   className="flex-1 flex flex-col"
                 >
                   <div className="flex justify-between items-start mb-10">
-                    <div className="px-4 py-1.5 bg-danger/10 text-danger border border-danger/20 rounded-full text-[10px] font-black uppercase tracking-[0.2em]">
-                      Action Required: High-Risk
+                    <div className="flex flex-col gap-2">
+                      <div className="px-4 py-1.5 bg-danger/10 text-danger border border-danger/20 rounded-full text-[10px] font-black uppercase tracking-[0.2em] w-fit">
+                        Action Required: High-Risk
+                      </div>
+                      {(pendingCoApproval.is_auto_escalated || pendingCoApproval.purpose?.includes('[PATIENT_UNRESPONSIVE]')) && (
+                        <motion.div 
+                          animate={{ opacity: [1, 0.5, 1] }}
+                          transition={{ duration: 1, repeat: Infinity }}
+                          className="px-4 py-1.5 bg-danger text-white rounded-full text-[10px] font-black uppercase tracking-[0.2em] shadow-[0_0_15px_rgba(239,68,68,0.5)]"
+                        >
+                          ⚠️ PATIENT UNRESPONSIVE (AUTO-ESCALATED)
+                        </motion.div>
+                      )}
                     </div>
                     <div className="flex items-center gap-2 text-2xl font-mono font-bold text-warning">
                       <Clock size={20} />

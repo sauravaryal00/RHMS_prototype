@@ -10,6 +10,7 @@ import AnomalyDetection from './pages/AnomalyDetection'
 import BaselineComparison from './pages/BaselineComparison'
 import LoadTestResults from './pages/LoadTestResults'
 import SystemStatus from './pages/SystemStatus'
+import SecurityTerminal from './pages/SecurityTerminal'
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/terminal" element={<SecurityTerminal />} />
           <Route path="/patient" element={<PatientDashboard />} />
           <Route path="/clinician" element={<ClinicianDashboard />} />
           <Route path="/audit" element={<AuditLogViewer />} />
