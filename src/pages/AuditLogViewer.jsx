@@ -13,7 +13,9 @@ import {
   Eye,
   MapPin,
   Cpu,
-  Workflow
+  GitMerge as Workflow,
+  User,
+  CheckCircle
 } from 'lucide-react';
 
 const AuditLogViewer = () => {
