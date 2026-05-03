@@ -13,7 +13,8 @@ import {
   Activity,
   Eye,
   Workflow,
-  MapPin
+  MapPin,
+  Stethoscope
 } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
 import { useConsentTokens } from '../hooks/useConsentTokens';
@@ -266,8 +267,8 @@ const PatientDashboard = () => {
                       <tr key={i} className="hover:bg-slate-50 transition-all group">
                         <td className="px-8 py-6">
                           <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-blue-600 group-hover:text-white transition-all">
-                              <User size={20} />
+                            <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                              <Stethoscope size={20} />
                             </div>
                             <div>
                               <div className="font-black text-slate-900 text-sm uppercase">{log.requester_id === 'dr_sharma' ? 'Dr. Priya Sharma' : log.requester_id}</div>

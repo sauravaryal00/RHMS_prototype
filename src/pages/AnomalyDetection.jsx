@@ -109,42 +109,58 @@ const SecurityBlacklistModal = ({ bannedList, onClose }) => {
 // ----------------------------------------------------------------------
 const LiveTerminalModal = ({ template, onComplete, onCancel }) => {
   const [terminalPhase, setTerminalPhase] = useState('executing'); 
-
-  let logs = [];
-  if (template.type === 'auth_brute') {
-    logs = [
-      `root@attacker-node:~# ${template.suggestedCommand}`,
-      " ",
-      "[+] Starting Hydra Dictionary Attack against rhms-gateway...",
-      "[+] Loading wordlist: /wordlists/rockyou.txt (14,344,391 words)",
-      "[Attempt 1] Testing: password123 ... FAILED",
-      "[Attempt 2] Testing: admin ... FAILED",
-      "[Attempt 3] Testing: qwerty ... FAILED",
-      "[Attempt 4] Testing: 12345678 ... FAILED",
-      "[Attempt 5] Testing: dr_sharma ... FAILED",
-      "[Attempt 6] Testing: hospital ... FAILED",
-      "[Attempt 7] Testing: letmein ... FAILED",
-      "[Attempt 8] Testing: security ... FAILED"
-    ];
-  } else {
-    logs = [
-      `root@attacker-node:~# ${template.suggestedCommand}`,
-      " ",
-      `[+] Executing payload vector: ${template.name}`,
-      `[+] Target: rhms-gateway (Zero-Trust Endpoint)`,
-      `[+] Injecting malicious payload...`,
-      `[+] Awaiting response from server...`
-    ];
-  }
+  const [visibleLogs, setVisibleLogs] = useState([]);
 
   useEffect(() => {
+    // Reset and clear terminal at start
+    setVisibleLogs([]);
+    setTerminalPhase('executing');
+
+    let logs = [];
+    if (template.type === 'auth_brute') {
+      logs = [
+        `[SYSTEM] Reseting terminal session...`,
+        `[SYSTEM] Connection established with attacker-node-v4`,
+        `root@attacker-node:~# ${template.suggestedCommand}`,
+        " ",
+        "[+] Starting Hydra Dictionary Attack against rhms-gateway...",
+        "[+] Loading wordlist: /wordlists/rockyou.txt (14,344,391 words)",
+        "[Attempt 1] Testing: password123 ... FAILED",
+        "[Attempt 2] Testing: admin ... FAILED",
+        "[Attempt 3] Testing: qwerty ... FAILED",
+        "[Attempt 4] Testing: 12345678 ... FAILED",
+        "[Attempt 5] Testing: dr_sharma ... FAILED",
+        "[Attempt 6] Testing: hospital ... FAILED",
+        "[Attempt 7] Testing: letmein ... FAILED",
+        "[Attempt 8] Testing: security ... FAILED"
+      ];
+    } else {
+      logs = [
+        `[SYSTEM] Clearing previous logs...`,
+        `[SYSTEM] Allocating buffer for new payload...`,
+        `root@attacker-node:~# ${template.suggestedCommand}`,
+        " ",
+        `[+] Executing payload vector: ${template.name}`,
+        `[+] Target: rhms-gateway (Zero-Trust Endpoint)`,
+        `[+] Injecting malicious payload...`,
+        `[+] Awaiting response from server...`
+      ];
+    }
+
+    // Line-by-line typing simulation
+    logs.forEach((line, idx) => {
+      setTimeout(() => {
+        setVisibleLogs(prev => [...prev, line]);
+      }, idx * 100);
+    });
+
     const timer1 = setTimeout(() => {
       setTerminalPhase('intercepted');
-    }, 1500);
+    }, logs.length * 100 + 500);
 
     const timer2 = setTimeout(() => {
       onComplete(template);
-    }, 3000);
+    }, logs.length * 100 + 2000);
 
     return () => {
       clearTimeout(timer1);
@@ -170,26 +186,28 @@ const LiveTerminalModal = ({ template, onComplete, onCancel }) => {
               <div className="w-3 h-3 rounded-full bg-amber-500" />
               <div className="w-3 h-3 rounded-full bg-emerald-500" />
             </div>
-            <div className="text-xs font-mono text-slate-400 font-bold">root@attacker-node:~</div>
+            <div className="text-xs font-mono text-slate-400 font-bold">root@attacker-node:~ (Simulation Mode)</div>
           </div>
         </div>
         
         <div className="p-6 font-mono text-sm h-96 overflow-y-auto custom-scrollbar flex flex-col">
-          <div className="text-emerald-400 mb-6">
-            Kali Linux Terminal v2.4<br/>
-            Session: Interception Simulation Agent
+          <div className="text-emerald-400 mb-6 border-b border-emerald-900/30 pb-2">
+            KALI LINUX TERMINAL v2.4<br/>
+            SESSION_ID: {Math.random().toString(36).substring(7).toUpperCase()}
           </div>
           
-          {logs.map((line, idx) => (
+          {visibleLogs.map((line, idx) => (
             <div key={idx} className="mb-2 text-emerald-400">
               {line}
             </div>
           ))}
           
           {terminalPhase === 'intercepted' && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4">
-              <div className="text-red-500 font-black text-lg mb-2">🚨 [POLICY GATEWAY] CRITICAL ANOMALY DETECTED!</div>
-              <div className="text-red-500 font-black text-lg">⛔ [ZERO-TRUST] CONNECTION TERMINATED. PAYLOAD INTERCEPTED.</div>
+            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="mt-4 p-4 border-2 border-red-500 bg-red-500/10 rounded-xl">
+              <div className="text-red-500 font-black text-lg mb-2 flex items-center gap-2">
+                <ShieldAlert size={20} /> [POLICY GATEWAY] CRITICAL ANOMALY DETECTED!
+              </div>
+              <div className="text-red-500 font-black text-lg">⛔ [ZERO-TRUST] CONNECTION TERMINATED. IP BLACKLISTED.</div>
             </motion.div>
           )}
         </div>

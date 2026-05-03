@@ -15,7 +15,8 @@ import {
   Cpu,
   GitMerge as Workflow,
   User,
-  CheckCircle
+  CheckCircle,
+  Stethoscope
 } from 'lucide-react';
 
 const AuditLogViewer = () => {
@@ -111,8 +112,15 @@ const AuditLogViewer = () => {
                         </div>
                       </td>
                       <td className="p-6">
-                        <div className="font-black text-slate-900 text-sm uppercase">{log.requester_id === 'dr_sharma' ? 'Dr. Priya Sharma' : (log.requester_id || 'Unknown')}</div>
-                        <div className="text-[9px] text-slate-500 font-bold uppercase tracking-widest italic">{log.requester_role || 'Clinician'}</div>
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                            <Stethoscope size={20} />
+                          </div>
+                          <div>
+                            <div className="font-black text-slate-900 text-sm uppercase">{log.requester_id === 'dr_sharma' ? 'Dr. Priya Sharma' : (log.requester_id || 'Unknown')}</div>
+                            <div className="text-[9px] text-slate-500 font-bold uppercase tracking-widest italic">{log.requester_role || 'Clinician'}</div>
+                          </div>
+                        </div>
                       </td>
                       <td className="p-6">
                         <div className="flex items-center gap-2">

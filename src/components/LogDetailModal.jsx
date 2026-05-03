@@ -10,7 +10,10 @@ import {
   Activity, 
   UserCheck, 
   AlertTriangle,
-  ArrowRight
+  ArrowRight,
+  Stethoscope,
+  User,
+  Bot
 } from 'lucide-react';
 
 const LogDetailModal = ({ log, isOpen, onClose }) => {
@@ -51,6 +54,28 @@ const LogDetailModal = ({ log, isOpen, onClose }) => {
 
           <div className="flex-1 overflow-y-auto p-8 space-y-8">
             
+            {/* Identity Nodes */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center border border-blue-200">
+                  <Stethoscope size={24} />
+                </div>
+                <div>
+                  <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Requester Node</div>
+                  <div className="text-sm font-black text-slate-900 uppercase">Dr. Priya Sharma</div>
+                </div>
+              </div>
+              <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center border border-emerald-200">
+                  {isEscalated ? <UserCheck size={24} /> : <User size={24} />}
+                </div>
+                <div>
+                  <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Responder Node</div>
+                  <div className="text-sm font-black text-slate-900 uppercase">{isEscalated ? "Caregiver (Sanjay)" : "Patient (Saurav)"}</div>
+                </div>
+              </div>
+            </div>
+
             {/* Workflow Visualization */}
             <div className="space-y-4">
               <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">Authentication Lifecycle</h3>
@@ -64,7 +89,7 @@ const LogDetailModal = ({ log, isOpen, onClose }) => {
                 <ArrowRight size={16} className="text-slate-300 mb-6" />
                 <div className="flex-1 flex flex-col items-center gap-2">
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 ${isEscalated ? 'bg-amber-100 text-amber-600 border-amber-200' : 'bg-emerald-100 text-emerald-600 border-emerald-200'}`}>
-                    <Activity size={18} />
+                    {isEscalated ? <Bot size={18} className="animate-pulse" /> : <Activity size={18} />}
                   </div>
                   <span className="text-[9px] font-black uppercase text-slate-600">Patient Check</span>
                 </div>
