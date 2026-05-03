@@ -30,7 +30,7 @@ const ClinicianDashboard = () => {
   const [isValidating, setIsValidating] = useState(false);
   const [validationStep, setValidationStep] = useState(0);
   const [patientId, setPatientId] = useState('patient-42');
-  const [purpose, setPurpose] = useState('Emergency Review');
+  const [purpose, setPurpose] = useState('Emergency cardiac anomaly detected – clinician review required');
   const [duration, setDuration] = useState(30);
   
   const { tokens, requests, requestAccess } = useConsentTokens();
@@ -102,19 +102,18 @@ const ClinicianDashboard = () => {
       <Sidebar role="clinician" />
       
       <main className="flex-1 ml-64 p-8">
-        <header className="mb-8">
-          <h1 className="text-3xl font-bold font-outfit">Clinician Portal</h1>
-          <p className="text-muted">{selectedClinician.dept} Department | {selectedClinician.name}</p>
-          <div className="text-[10px] bg-primary/20 text-primary px-2 py-1 rounded w-fit mt-2 font-mono">DEBUG: COMPONENT_RENDERED_OK | DOCTOR: {selectedClinician.id}</div>
+        <header className="mb-8 border-b border-slate-200 pb-6">
+          <h1 className="text-4xl font-bold font-outfit text-slate-800 mb-2">Clinician Portal</h1>
+          <p className="text-slate-500 text-lg">{selectedClinician.dept} Department | {selectedClinician.name}</p>
         </header>
 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
           {/* Request Panel */}
           <div className="xl:col-span-1 space-y-6">
-            <div className="glass p-6 rounded-2xl">
-              <h3 className="font-bold flex items-center gap-2 mb-6">
-                <Send size={18} className="text-primary" />
-                Request Emergency Access
+            <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
+              <h3 className="text-xl font-bold flex items-center gap-2 mb-6 text-slate-800">
+                <Send size={20} className="text-blue-600" />
+                Request Access Panel
               </h3>
               
               <form onSubmit={handleRequestAccess} className="space-y-4">
@@ -145,55 +144,70 @@ const ClinicianDashboard = () => {
                 </div>
 
                 <div>
-                  <label className="text-[10px] text-muted uppercase font-bold tracking-widest block mb-2">Purpose</label>
+                  <label className="text-xs text-slate-500 uppercase font-bold tracking-widest block mb-2">Purpose</label>
                   <select 
                     value={purpose}
                     onChange={(e) => setPurpose(e.target.value)}
-                    className="w-full bg-surface border border-white/10 rounded-xl px-4 py-2 focus:outline-none focus:border-primary/50 text-sm appearance-none"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 text-sm appearance-none text-slate-800"
                   >
-                    <option>Symptom Review</option>
-                    <option>Emergency Review</option>
-                    <option>Routine Check</option>
+                    <option value="Emergency cardiac anomaly detected – clinician review required">Emergency cardiac anomaly detected – clinician review required</option>
+                    <option value="Symptom Review">Symptom Review</option>
+                    <option value="Routine Check">Routine Check</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="text-[10px] text-muted uppercase font-bold tracking-widest block mb-2">Duration (mins)</label>
+                  <label className="text-xs text-slate-500 uppercase font-bold tracking-widest block mb-2">Duration (mins)</label>
                   <input 
                     type="number"
                     value={duration}
                     onChange={(e) => setDuration(parseInt(e.target.value))}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 focus:outline-none focus:border-primary/50 text-sm"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 text-sm text-slate-800"
                   />
                 </div>
 
                 <button 
                   type="submit"
                   disabled={isRequesting || pendingRequest}
-                  className="w-full bg-primary/20 text-primary border border-primary/30 hover:bg-primary hover:text-background font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-3 disabled:opacity-50 shadow-md mt-4"
                 >
                   {isRequesting || pendingRequest ? (
                     <>
-                      <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                       {pendingRequest?.status === 'pending_caregiver' 
                         ? 'Waiting for Caregiver...' 
-                        : 'Waiting for Patient...'}
+                        : 'Waiting for patient approval'}
                     </>
                   ) : (
                     <>
-                      <Lock size={18} />
-                      Request Token
+                      <ShieldCheck size={20} />
+                      Request Patient Consent
                     </>
                   )}
                 </button>
               </form>
             </div>
 
-            <div className="glass p-6 rounded-2xl">
-              <h3 className="font-bold flex items-center gap-2 mb-6">
-                <ShieldCheck size={18} className="text-success" />
+            <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
+              <h3 className="text-xl font-bold flex items-center gap-2 mb-6 text-slate-800">
+                <ShieldCheck size={20} className="text-emerald-500" />
                 Policy Gateway Status
               </h3>
+              
+              <div className="grid grid-cols-3 gap-2 mb-8">
+                <div className={`p-3 rounded-lg text-center border ${activeToken ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-slate-50 border-slate-200 text-slate-500'}`}>
+                  <div className="text-[10px] uppercase font-bold tracking-wider mb-1">Consent</div>
+                  <div className="font-mono text-xs font-bold">{activeToken ? 'GRANTED' : pendingRequest ? 'PENDING' : 'NONE'}</div>
+                </div>
+                <div className={`p-3 rounded-lg text-center border ${activeToken ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-slate-50 border-slate-200 text-slate-500'}`}>
+                  <div className="text-[10px] uppercase font-bold tracking-wider mb-1">Token</div>
+                  <div className="font-mono text-xs font-bold">{activeToken ? 'ISSUED' : 'NONE'}</div>
+                </div>
+                <div className={`p-3 rounded-lg text-center border ${activeToken && validationStep === validationSteps.length ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
+                  <div className="text-[10px] uppercase font-bold tracking-wider mb-1">Access</div>
+                  <div className="font-mono text-xs font-bold">{activeToken && validationStep === validationSteps.length ? 'ALLOWED' : 'RESTRICTED'}</div>
+                </div>
+              </div>
               <PolicyGatewaySteps 
                 steps={validationSteps} 
                 currentStep={validationStep} 
@@ -215,33 +229,32 @@ const ClinicianDashboard = () => {
             </div>
           </div>
 
-          {/* Data Viewer Panel */}
           <div className="xl:col-span-2">
             <div className="relative h-full">
               {!activeToken && (
-                <div className="absolute inset-0 z-10 glass backdrop-blur-xl rounded-2xl flex flex-col items-center justify-center text-center p-8 border-dashed border-2 border-white/10">
-                  <div className="w-20 h-20 rounded-full bg-danger/10 flex items-center justify-center text-danger mb-4">
+                <div className="absolute inset-0 z-10 bg-white/80 backdrop-blur-md rounded-3xl flex flex-col items-center justify-center text-center p-8 border-dashed border-2 border-slate-300">
+                  <div className="w-20 h-20 rounded-full bg-red-50 flex items-center justify-center text-red-500 mb-4">
                     <Lock size={40} />
                   </div>
-                  <h2 className="text-2xl font-bold mb-2">Access Restricted</h2>
-                  <p className="text-muted max-w-sm">No valid consent token found for this patient. Please request access from the patient directly.</p>
+                  <h2 className="text-3xl font-bold mb-2 text-slate-800">Access Restricted</h2>
+                  <p className="text-slate-500 max-w-sm text-lg">No valid consent token found. Please request patient consent via the access panel.</p>
                 </div>
               )}
 
-              <div className={`space-y-6 ${!activeToken ? 'blur-sm pointer-events-none grayscale' : ''}`}>
-                <div className="glass p-6 rounded-2xl flex items-center justify-between border-primary/20">
+              <div className={`space-y-6 ${!activeToken ? 'blur-md pointer-events-none grayscale' : ''}`}>
+                <div className="bg-white p-8 rounded-3xl flex items-center justify-between border border-slate-200 shadow-sm">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                      <Eye size={24} />
+                    <div className="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
+                      <Eye size={28} />
                     </div>
                     <div>
-                      <h3 className="font-bold">Live Vitals Stream</h3>
-                      <p className="text-xs text-muted">Patient: Saurav Aryal (42) | Device: DEV-001</p>
+                      <h3 className="font-bold text-xl text-slate-800">Live Vitals Stream</h3>
+                      <p className="text-sm text-slate-500">Patient: Saurav Aryal (42) | Device: DEV-001</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-[10px] text-muted font-bold uppercase mb-1">Token Expiry</div>
-                    <div className="px-3 py-1 bg-warning/10 text-warning border border-warning/20 rounded-lg text-sm font-mono">
+                    <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">Token Expiry</div>
+                    <div className="px-4 py-2 bg-amber-50 text-amber-700 border border-amber-200 rounded-xl font-mono font-bold">
                       <CountdownTimer expiryDate={activeToken?.expires_at} />
                     </div>
                   </div>
@@ -268,19 +281,21 @@ const ClinicianDashboard = () => {
                   />
                 </div>
 
-                <div className="glass p-6 rounded-2xl">
-                  <h3 className="font-bold mb-4 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <FileText size={18} className="text-primary" />
+                <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
+                  <h3 className="font-bold text-lg mb-6 flex items-center justify-between text-slate-800">
+                    <div className="flex items-center gap-3">
+                      <FileText size={20} className="text-blue-600" />
                       Medical Notes (Protected)
                     </div>
-                    <div className="flex items-center gap-1 px-2 py-0.5 bg-success/10 text-success border border-success/20 rounded text-[10px] font-mono">
-                      <ShieldCheck size={10} /> DECRYPTED_AES256
+                    <div className="flex items-center gap-1 px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-mono font-bold">
+                      <ShieldCheck size={14} /> DECRYPTED_AES256
                     </div>
                   </h3>
-                  <div className="p-4 bg-white/5 rounded-xl border border-white/5 text-xs text-text-primary/70 leading-relaxed font-mono">
-                    <span className="text-primary/60">[TIMESTAMP: 2026-03-31T12:45Z]</span><br/>
+                  <div className="p-6 bg-slate-50 rounded-2xl border border-slate-200 text-sm text-slate-600 leading-relaxed font-mono">
+                    <span className="text-blue-500/60">[TIMESTAMP: 2026-03-31T12:45Z]</span><br/>
+                    <br/>
                     SUBJ: CARDIOVASCULAR_REPORT_ID_8829<br/>
+                    <br/>
                     OBS: Patient exhibits stable rhythm (Sinus). Previous history of mild nocturnal arrhythmia. Current HR variance remains within 1.2% threshold. Access granted under "Emergency Review" protocol for immediate diagnostic validation. Data residency strictly ephemeral.
                   </div>
                 </div>

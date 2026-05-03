@@ -7,17 +7,18 @@ export default {
   theme: {
     extend: {
       colors: {
-        background: '#0a0e1a',
-        surface: '#111827',
+        background: '#f8fafc', // Light slate background
+        surface: '#ffffff', // White surface
         primary: {
-          DEFAULT: '#00d4ff',
-          glow: 'rgba(0, 212, 255, 0.2)',
+          DEFAULT: '#2563eb', // Clean blue accent
+          glow: 'rgba(37, 99, 235, 0.2)',
         },
         success: '#10b981',
         danger: '#ef4444',
         warning: '#f59e0b',
-        muted: '#64748b',
-        'text-primary': '#f1f5f9',
+        muted: '#64748b', // Slate muted text
+        'text-primary': '#0f172a', // Dark slate text
+        border: '#e2e8f0', // Light borders
       },
       fontFamily: {
         outfit: ['Outfit', 'sans-serif'],

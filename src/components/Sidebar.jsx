@@ -37,20 +37,20 @@ const Sidebar = ({ role = 'admin' }) => {
     <aside className="w-64 h-screen bg-surface border-r border-white/5 flex flex-col fixed left-0 top-0 z-30">
       <div className="p-6">
         <div className="flex items-center gap-3 mb-8">
-          <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
             <Activity className="text-primary w-6 h-6" />
           </div>
           <div>
             <h2 className="font-bold text-text-primary tracking-tight">RHMS</h2>
-            <p className="text-[10px] text-primary/70 font-mono">MIT233932 PROTOTYPE</p>
+            <p className="text-[10px] text-muted font-mono">MIT233932 PROTOTYPE</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10 mb-6">
+        <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200 mb-6 shadow-sm">
           <div className="text-2xl">{currentRole?.icon}</div>
           <div>
-            <div className="text-xs text-muted font-medium uppercase">{currentRole?.name}</div>
-            <div className="text-[10px] text-success flex items-center gap-1">
+            <div className="text-xs text-text-primary font-bold uppercase">{currentRole?.name}</div>
+            <div className="text-[10px] text-success flex items-center gap-1 font-medium">
               <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
               Online
             </div>

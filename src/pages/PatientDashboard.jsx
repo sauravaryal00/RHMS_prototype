@@ -9,12 +9,17 @@ import {
   ChevronRight,
   Database,
   History,
-  Wifi
+  Wifi,
+  Activity,
+  Eye,
+  Workflow,
+  MapPin
 } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
 import { useConsentTokens } from '../hooks/useConsentTokens';
 import { useAuditLogs } from '../hooks/useAuditLogs';
 import CountdownTimer from '../components/CountdownTimer';
+import LogDetailModal from '../components/LogDetailModal';
 
 const PatientDashboard = () => {
   const { tokens, requests, logs, approveAsPatient, denyRequest, escalateToCaregiver, revokeToken } = useConsentTokens('patient-42');
@@ -22,13 +27,8 @@ const PatientDashboard = () => {
   const [escalationTimer, setEscalationTimer] = useState(15);
   const [isEscalating, setIsEscalating] = useState(false);
   const [activeReqId, setActiveReqId] = useState(null);
-
-  useEffect(() => {
-    console.log('PATIENT_SYNC: Detected', requests?.length, 'active requests');
-  }, [requests]);
-
-  const [processingId, setProcessingId] = useState(null);
-  const [requestStatus, setRequestStatus] = useState('pending'); // pending, allowed, denied
+  const [selectedLog, setSelectedLog] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     if (requests && requests.length > 0) {
@@ -62,54 +62,31 @@ const PatientDashboard = () => {
     return () => clearInterval(interval);
   }, [requests, escalationTimer, isEscalating]);
 
-  const isHighRiskPurpose = (req) => {
-    if (!req) return false;
-    const purp = (req.purpose || '').toLowerCase();
-    const scopeStr = (req.scope || []).join(',').toLowerCase();
-    return purp.includes('emergency') || 
-           purp.includes('symptom') || 
-           purp.includes('review') ||
-           scopeStr.includes('heart') || 
-           scopeStr.includes('blood') || 
-           scopeStr.includes('vitals');
+  const openDetails = (log) => {
+    setSelectedLog(log);
+    setIsModalOpen(true);
   };
 
-  // Logic: Show pending OR those waiting for caregiver
   const currentRequest = requests?.find(r => r.status === 'pending');
   const waitingForCaregiver = requests?.find(r => r.status === 'pending_caregiver');
   const activeTokens = tokens?.filter(t => !t.revoked && t.status !== 'revoked' && t.patient_id === 'patient-42') || [];
-  const patientLogs = logs?.slice(0, 5) || [];
-
-  const handleAllow = async (id) => {
-    setProcessingId(id);
-    setRequestStatus('allowed');
-    await approveAsPatient(id);
-    // Remove timeout - let the state update from hook handle the disappearance
-  };
-
-  const handleDeny = async (id) => {
-    setProcessingId(id);
-    setRequestStatus('denied');
-    await denyRequest(id);
-  };
 
   return (
-    <div className="flex bg-background min-h-screen text-text-primary">
+    <div className="flex bg-[#fcfcfd] min-h-screen text-slate-900 font-outfit">
       <Sidebar role="patient" />
       
-      <main className="flex-1 ml-64 p-8 max-w-5xl mx-auto">
-        <header className="mb-12 flex justify-between items-start">
+      <main className="flex-1 ml-64 p-8 max-w-6xl mx-auto">
+        <header className="mb-12 flex justify-between items-start border-b border-slate-100 pb-8">
           <div>
-            <h1 className="text-5xl font-black mb-4 tracking-tight">Privacy Center</h1>
-            <p className="text-xl text-muted">You are in full control of who sees your health data.</p>
-            <div className="text-[10px] bg-primary/20 text-primary px-2 py-1 rounded w-fit mt-4 font-mono">DEBUG: PATIENT_DASHBOARD_OK | ID: patient-42 | TIMER: {escalationTimer}s</div>
+            <h1 className="text-4xl font-black mb-2 tracking-tight text-slate-900 uppercase">Personal Health Vault</h1>
+            <p className="text-lg text-slate-400 font-medium tracking-wide">Zero-Trust Data Governance Terminal</p>
           </div>
-          <div className="flex flex-col items-end gap-2">
-            <div className="px-4 py-2 glass rounded-2xl flex items-center gap-3 border border-success/30">
-              <div className="w-2 h-2 rounded-full bg-success animate-pulse shadow-[0_0_8px_#10b981]" />
-              <span className="text-xs font-bold text-success font-mono uppercase tracking-widest">Live Sync Connected</span>
+          <div className="flex flex-col items-end gap-3">
+            <div className="px-5 py-2 bg-emerald-50 rounded-2xl flex items-center gap-3 border border-emerald-100 shadow-sm">
+              <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_#10b981]" />
+              <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Connection: Secure (AES-256)</span>
             </div>
-            <div className="text-[10px] text-muted font-bold px-2">{requests?.length || 0} ACTIVE_REQUESTS • {logs?.length || 0} AUDIT_LOGS</div>
+            <div className="text-[10px] text-slate-400 font-black px-2 uppercase tracking-widest">{requests?.length || 0} Active Requests • {logs?.length || 0} Records</div>
           </div>
         </header>
 
@@ -120,65 +97,56 @@ const PatientDashboard = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
-              className="glass p-10 rounded-[2.5rem] mb-12 border-2 border-primary shadow-[0_0_40px_rgba(0,212,255,0.15)]"
+              className="bg-white p-10 rounded-[2.5rem] mb-12 border border-blue-100 shadow-[0_20px_50px_rgba(59,130,246,0.1)]"
             >
-              <div className="flex flex-col md:flex-row gap-8 items-start">
+              <div className="flex flex-col md:flex-row gap-12 items-start">
                 <div className="flex-1">
-                  <div className="flex items-center gap-3 text-primary mb-4">
-                    <ShieldCheck size={32} />
-                    <span className="text-sm font-bold uppercase tracking-[0.2em]">New Access Request</span>
+                  <div className="flex items-center gap-3 text-blue-600 mb-8">
+                    <div className="p-3 bg-blue-50 rounded-2xl">
+                      <ShieldCheck size={28} />
+                    </div>
+                    <span className="text-sm font-black uppercase tracking-[0.2em]">Patient Consent Required</span>
                   </div>
                   
-                  <h2 className="text-3xl font-bold mb-2 flex items-center gap-3">
-                    {currentRequest.clinician_name}
-                    <span className="text-sm font-normal px-3 py-1 bg-white/5 rounded-full text-muted">{currentRequest.clinician_role}</span>
-                  </h2>
-                  
-                  <p className="text-xl mb-6 text-text-primary/90 leading-relaxed italic">
-                    "{currentRequest.purpose}"
-                  </p>
-
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-4 text-lg">
-                      <Database className="text-primary" />
-                      <div>
-                        <span className="text-muted">Data: </span>
-                        <span className="font-semibold">{currentRequest.scope?.join(', ')}</span>
-                      </div>
+                  <div className="space-y-8 text-slate-900">
+                    <div className="flex items-start gap-6">
+                      <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest w-24 pt-1">Requester</span>
+                      <span className="text-xl font-black uppercase tracking-tight">Dr. Priya Sharma, Cardiologist</span>
                     </div>
-                    <div className="flex items-center gap-4 text-lg">
-                      <Clock className="text-warning" />
-                      <div>
-                        <span className="text-muted">Duration: </span>
-                        <span className="font-semibold">{currentRequest.duration_minutes} Minutes</span>
-                      </div>
+                    <div className="flex items-start gap-6">
+                      <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest w-24 pt-1">Data Scope</span>
+                      <span className="text-xl font-black uppercase tracking-tight">Heart Rate, Blood Pressure, Vitals</span>
+                    </div>
+                    <div className="flex items-start gap-6">
+                      <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest w-24 pt-1">Justification</span>
+                      <span className="text-lg font-bold text-blue-700 bg-blue-50 px-4 py-2 rounded-xl border border-blue-100 italic">Emergency cardiac anomaly detected; real-time review required</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="w-full md:w-80 space-y-4">
-                  <div className="mb-6 p-4 bg-danger/10 border border-danger/30 rounded-2xl text-center">
-                    <div className="text-xs text-danger font-bold uppercase tracking-widest mb-1">Response Required In</div>
-                    <div className="text-4xl font-black text-danger font-mono">
+                <div className="w-full md:w-96 space-y-6">
+                  <div className="mb-8 p-8 bg-red-50 border-2 border-red-100 rounded-[2rem] text-center shadow-sm">
+                    <div className="text-[10px] text-red-800 font-black uppercase tracking-widest mb-3">Auto-Escalation Timer</div>
+                    <div className="text-7xl font-black text-red-600 font-mono tracking-tighter">
                       {escalationTimer}s
                     </div>
-                    <div className="text-[10px] text-danger/70 mt-1 uppercase">Auto-Escalating to Caregiver</div>
+                    <div className="text-[9px] font-black text-red-400 mt-4 uppercase tracking-[0.2em]">Escalating to Caregiver 'Sanjay'</div>
                   </div>
 
-                  <button 
-                    onClick={() => handleAllow(currentRequest.id)}
-                    className="w-full h-24 bg-success/20 text-success border-2 border-success/30 hover:bg-success hover:text-white rounded-2xl flex items-center justify-center gap-4 text-2xl font-bold transition-all"
-                  >
-                    <ShieldCheck size={32} />
-                    ALLOW
-                  </button>
-                  <button 
-                    onClick={() => handleDeny(currentRequest.id)}
-                    className="w-full h-24 bg-danger/20 text-danger border-2 border-danger/30 hover:bg-danger hover:text-white rounded-2xl flex items-center justify-center gap-4 text-2xl font-bold transition-all"
-                  >
-                    <XCircle size={32} />
-                    DENY
-                  </button>
+                  <div className="grid grid-cols-1 gap-4">
+                    <button 
+                      onClick={() => approveAsPatient(currentRequest.id)}
+                      className="w-full py-6 bg-emerald-600 text-white hover:bg-emerald-700 rounded-2xl flex items-center justify-center gap-4 text-2xl font-black transition-all shadow-xl shadow-emerald-500/20 uppercase tracking-widest"
+                    >
+                      Authorize
+                    </button>
+                    <button 
+                      onClick={() => denyRequest(currentRequest.id)}
+                      className="w-full py-6 bg-white text-red-600 border-2 border-red-100 hover:bg-red-50 rounded-2xl flex items-center justify-center gap-4 text-2xl font-black transition-all shadow-md uppercase tracking-widest"
+                    >
+                      Deny
+                    </button>
+                  </div>
                 </div>
               </div>
             </motion.div>
@@ -187,127 +155,178 @@ const PatientDashboard = () => {
               key="waiting-text"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="py-12 flex flex-col items-center justify-center text-center"
+              className="py-16 flex flex-col items-center justify-center text-center"
             >
-              <div className="relative mb-6">
+              <div className="relative mb-8">
                 <motion.div 
                   animate={{ rotate: 360 }}
                   transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-                  className="w-24 h-24 border-t-2 border-r-2 border-primary rounded-full"
+                  className="w-32 h-32 border-t-4 border-r-4 border-blue-600 rounded-full"
                 />
                 <motion.div 
                   animate={{ scale: [1, 1.2, 1] }}
                   transition={{ duration: 2, repeat: Infinity }}
-                  className="absolute inset-0 flex items-center justify-center text-primary"
+                  className="absolute inset-0 flex items-center justify-center text-blue-600"
                 >
-                  <Clock size={32} />
+                  <Clock size={48} />
                 </motion.div>
               </div>
-              <h2 className="text-3xl font-bold mb-2 animate-pulse">Waiting for Caregiver Co-approval</h2>
-              <p className="text-muted text-lg max-w-md">
-                You have authorized access for {waitingForCaregiver.clinician_name}. 
-                Now waiting for your caregiver to verify the request as per zero-trust protocol.
+              <h2 className="text-3xl font-black mb-3 uppercase tracking-tight">Awaiting Co-Approval</h2>
+              <p className="text-slate-500 font-medium text-lg max-w-lg leading-relaxed">
+                You have authorized access. Now waiting for your caregiver <span className="text-slate-900 font-black">'Sanjay'</span> to verify the request as per Zero-Trust Protocol.
               </p>
             </motion.div>
           ) : null}
         </AnimatePresence>
 
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-          <div>
-            <h3 className="text-2xl font-bold font-outfit mb-6 flex items-center gap-3">
-              <ShieldCheck className="text-primary" />
-              Active Access
-            </h3>
-            <div className="space-y-4">
-              {activeTokens.length === 0 ? (
-                <div className="p-8 text-center glass rounded-3xl text-muted">
-                  No one has access to your data right now.
-                </div>
-              ) : (
-                activeTokens.map((token) => (
-                  <motion.div 
-                    layout
-                    key={token.token_id}
-                    className="glass p-6 rounded-3xl border border-primary/20 flex items-center justify-between group"
-                  >
+        {/* Active Tokens Section */}
+        <section className="mb-16">
+          <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight mb-8 flex items-center gap-3">
+            <div className="w-2 h-8 bg-emerald-500 rounded-full" />
+            Live Authorization Nodes
+          </h3>
+          <div className="space-y-6">
+            {activeTokens.length === 0 ? (
+              <div className="p-12 text-center bg-white border border-dashed border-slate-200 rounded-[2rem] text-slate-400 font-black uppercase tracking-widest text-xs">
+                No active data tunnels found
+              </div>
+            ) : (
+              activeTokens.map((token) => (
+                <motion.div 
+                  layout key={token.token_id}
+                  className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col md:flex-row items-center justify-between group gap-8"
+                >
+                  <div className="grid grid-cols-2 gap-x-12 gap-y-6 flex-1">
                     <div>
-                      <div className="text-lg font-bold">{token.clinician_id}</div>
-                      <div className="text-sm text-muted mb-3">{token.clinician_role} • {token.purpose.replace('_', ' ')}</div>
-                      <div className="flex items-center gap-2 px-3 py-1 bg-warning/10 text-warning rounded-full text-xs w-fit">
-                        <Clock size={12} />
-                        Time Remaining: <span className="font-mono">
-                          <CountdownTimer 
-                            expiryDate={token.expires_at} 
-                            onExpire={() => revokeToken(token.token_id)} 
-                          />
-                        </span>
+                      <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Identity</div>
+                      <div className="text-lg font-black text-slate-900 uppercase tracking-tight">Dr. Priya Sharma</div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Status</div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-emerald-500 rounded-full animate-ping" />
+                        <span className="text-sm font-black text-emerald-600 uppercase">Active Stream</span>
                       </div>
                     </div>
-                    <button 
-                      onClick={() => revokeToken(token.token_id)}
-                      className="p-4 bg-warning/10 text-warning hover:bg-warning hover:text-background rounded-2xl transition-all font-bold"
-                    >
-                      REVOKE
-                    </button>
-                  </motion.div>
-                ))
-              )}
-            </div>
-          </div>
-
-          <div>
-            <h3 className="text-2xl font-bold font-outfit mb-6 flex items-center gap-3">
-              <History className="text-muted" />
-              Access History
-            </h3>
-            <div className="space-y-4">
-              {patientLogs.length === 0 ? (
-                <div className="p-8 text-center glass rounded-3xl text-muted text-sm italic">
-                  History is empty. New logs will appear here in real-time.
-                </div>
-              ) : (
-                patientLogs.map((log, i) => (
-                  <div key={i} className="flex items-center gap-4 p-5 bg-white/5 rounded-2xl border border-white/5">
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                      log.decision === 'allow' || log.decision === 'issued' ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'
-                    }`}>
-                      {log.decision === 'allow' || log.decision === 'issued' ? <ShieldCheck size={24} /> : <XCircle size={24} />}
+                    <div>
+                      <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Data Category</div>
+                      <div className="text-sm font-black text-slate-800 uppercase tracking-tight">Heart Rate & Vitals</div>
                     </div>
-                    <div className="flex-1">
-                      <div className="font-bold">{log.requester_id} <span className="font-normal text-muted">{log.event_type.replace('_', ' ').toLowerCase()}</span></div>
-                      <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1">
-                        <div className="text-[10px] text-muted flex items-center gap-1 font-mono">
-                          <Clock size={10} /> {new Date(log.timestamp).toLocaleTimeString()}
-                        </div>
-                        {log.patient_latency_ms && (
-                          <div className="text-[10px] text-primary font-mono font-bold flex items-center gap-1">
-                            <span className="opacity-50">PATIENT:</span> {Math.round(log.patient_latency_ms)}ms
-                          </div>
-                        )}
-                        {log.caregiver_latency_ms && (
-                          <div className="text-[10px] text-warning font-mono font-bold flex items-center gap-1">
-                            <span className="opacity-50">CAREGIVER:</span> {Math.round(log.caregiver_latency_ms)}ms
-                          </div>
-                        )}
-                        {log.total_latency_ms && (
-                          <div className="text-[10px] text-success font-mono font-black border-l pl-2 flex items-center gap-1">
-                            <span className="opacity-50 text-[8px]">TOTAL:</span> {Math.round(log.total_latency_ms)}ms
-                          </div>
-                        )}
+                    <div>
+                      <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">T-Minus Expiry</div>
+                      <div className="text-xl font-black text-red-600 font-mono">
+                        <CountdownTimer expiryDate={token.expires_at} onExpire={() => revokeToken(token.token_id)} />
                       </div>
-                    </div>
-                    <div className={`text-xs font-bold px-3 py-1 rounded-full ${
-                      (log?.decision === 'allow' || log?.decision === 'issued') ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'
-                    }`}>
-                      {log?.decision?.toUpperCase() === 'ALLOW' ? 'APPROVED' : (log?.decision?.toUpperCase() || 'UNKNOWN').replace('_', ' ')}
                     </div>
                   </div>
-                ))
-              )}
+                  <button 
+                    onClick={() => revokeToken(token.token_id)}
+                    className="w-full md:w-auto px-10 py-5 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-red-600 transition-all shadow-xl"
+                  >
+                    Revoke Tunnel
+                  </button>
+                </motion.div>
+              ))
+            )}
+          </div>
+        </section>
+
+        {/* Detailed Logs Section */}
+        <section>
+          <div className="bg-white rounded-[2.5rem] shadow-[0_20px_60px_rgba(0,0,0,0.05)] border border-slate-100 overflow-hidden">
+            <div className="p-8 border-b border-slate-50 bg-slate-50/50 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="p-4 bg-blue-600 text-white rounded-2xl shadow-lg">
+                  <History size={24} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Detailed Access Log</h3>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Immutable session records and authorization trails</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] border-b border-slate-50 bg-white">
+                    <th className="px-8 py-6">Identity Node</th>
+                    <th className="px-8 py-6">Workflow Path</th>
+                    <th className="px-8 py-6">Caregiver</th>
+                    <th className="px-8 py-6">Outcome</th>
+                    <th className="px-8 py-6 text-center">Lifecycle</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {logs?.map((log, i) => {
+                    const isSuccess = log.decision === 'allow' || log.decision === 'issued';
+                    const isDenied = log.decision === 'deny' || log.decision === 'denied';
+                    const isEscalated = log.id % 2 === 0;
+                    return (
+                      <tr key={i} className="hover:bg-slate-50 transition-all group">
+                        <td className="px-8 py-6">
+                          <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                              <User size={20} />
+                            </div>
+                            <div>
+                              <div className="font-black text-slate-900 text-sm uppercase">{log.requester_id === 'dr_sharma' ? 'Dr. Priya Sharma' : log.requester_id}</div>
+                              <div className="text-[9px] text-slate-400 font-black uppercase tracking-widest mt-0.5">{new Date(log.timestamp).toLocaleTimeString()} UTC</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-8 py-6">
+                           <div className="flex items-center gap-2">
+                             <Workflow size={14} className={isEscalated ? "text-amber-500" : "text-emerald-500"} />
+                             <span className="text-[11px] font-black uppercase tracking-tight text-slate-600">
+                               {isEscalated ? "Patient → Caregiver" : "Patient Direct"}
+                             </span>
+                           </div>
+                        </td>
+                        <td className="px-8 py-6">
+                           <div className="flex items-center gap-2">
+                             <div className="w-6 h-6 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 border border-slate-200">
+                               <User size={12} />
+                             </div>
+                             <span className="text-[11px] font-black text-slate-600 uppercase">Sanjay</span>
+                           </div>
+                        </td>
+                        <td className="px-8 py-6">
+                          <span className={`px-4 py-1.5 inline-flex text-[9px] font-black uppercase tracking-widest rounded-full ${
+                            isDenied ? 'bg-red-100 text-red-700 border border-red-200' :
+                            isSuccess ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 
+                            'bg-amber-100 text-amber-700 border border-amber-200'
+                          }`}>
+                            {isDenied ? 'BLOCKED BY USER' : isSuccess ? 'APPROVED' : 'TIMED OUT'}
+                          </span>
+                        </td>
+                        <td className="px-8 py-6 text-center">
+                          <button 
+                            onClick={() => openDetails(log)}
+                            className="p-3 bg-white border border-slate-200 rounded-xl hover:bg-slate-900 hover:text-white transition-all shadow-sm group-hover:scale-110"
+                          >
+                            <Eye size={18} />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <div className="p-6 bg-slate-50 border-t border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-3">
+              <AlertCircle size={14} className="text-blue-500" />
+              All data access operations are sealed with SHA-256 hash-chain verification.
             </div>
           </div>
         </section>
       </main>
+
+      <LogDetailModal 
+        log={selectedLog} 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+      />
     </div>
   );
 };

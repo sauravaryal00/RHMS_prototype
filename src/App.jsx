@@ -12,26 +12,34 @@ import LoadTestResults from './pages/LoadTestResults'
 import SystemStatus from './pages/SystemStatus'
 import SecurityTerminal from './pages/SecurityTerminal'
 
+import { AuthProvider } from './context/AuthContext'
+import ProtectedRoute from './components/ProtectedRoute'
+
 function App() {
   return (
-    <Router>
-      <div className="min-h-screen bg-background text-text-primary font-outfit">
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/admin" element={<AdminDashboard />} />
-          <Route path="/terminal" element={<SecurityTerminal />} />
-          <Route path="/patient" element={<PatientDashboard />} />
-          <Route path="/clinician" element={<ClinicianDashboard />} />
-          <Route path="/audit" element={<AuditLogViewer />} />
-          <Route path="/caregiver" element={<CaregiverDashboard />} />
-          <Route path="/anomalies" element={<AnomalyDetection />} />
-          <Route path="/baselines" element={<BaselineComparison />} />
-          <Route path="/experiments" element={<LoadTestResults />} />
-          <Route path="/settings" element={<SystemStatus />} />
-          <Route path="/" element={<Navigate to="/login" replace />} />
-        </Routes>
-      </div>
-    </Router>
+    <AuthProvider>
+      <Router>
+        <div className="min-h-screen bg-background text-text-primary font-outfit">
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/login/:role" element={<LoginPage />} />
+            
+            <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+            <Route path="/terminal" element={<ProtectedRoute><SecurityTerminal /></ProtectedRoute>} />
+            <Route path="/patient" element={<ProtectedRoute><PatientDashboard /></ProtectedRoute>} />
+            <Route path="/clinician" element={<ProtectedRoute><ClinicianDashboard /></ProtectedRoute>} />
+            <Route path="/audit" element={<ProtectedRoute><AuditLogViewer /></ProtectedRoute>} />
+            <Route path="/caregiver" element={<ProtectedRoute><CaregiverDashboard /></ProtectedRoute>} />
+            <Route path="/anomalies" element={<ProtectedRoute><AnomalyDetection /></ProtectedRoute>} />
+            <Route path="/baselines" element={<ProtectedRoute><BaselineComparison /></ProtectedRoute>} />
+            <Route path="/experiments" element={<ProtectedRoute><LoadTestResults /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><SystemStatus /></ProtectedRoute>} />
+            
+            <Route path="/" element={<Navigate to="/login" replace />} />
+          </Routes>
+        </div>
+      </Router>
+    </AuthProvider>
   )
 }
 

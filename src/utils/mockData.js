@@ -21,7 +21,10 @@ export const mockVitals = {
   hr: 78,
   bp_sys: 122,
   bp_dia: 81,
-  spo2: 97.4
+  spo2: 97.4,
+  temp: 98.6,
+  resp: 16,
+  glucose: 110
 };
 
 export const mockConsentTokens = [
@@ -31,7 +34,7 @@ export const mockConsentTokens = [
     clinician_id: "dr_sharma",
     clinician_role: "cardiologist",
     purpose: "symptom_review",
-    scope: ["hr", "bp_sys", "bp_dia", "spo2"],
+    scope: ["hr", "bp_sys", "bp_dia", "spo2", "temp", "resp", "glucose"],
     issued_at: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
     expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
     revoked: false,
