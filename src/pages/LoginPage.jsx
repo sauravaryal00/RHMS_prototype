@@ -9,7 +9,7 @@ import emailjs from '@emailjs/browser'
 
 const LoginPage = () => {
   // --- EMAILJS CONFIG (Using Environment Variables) ---
-  const SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID || "service_qiz4qnd"; 
+  const SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID || "service_ldaleyv"; 
   const TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID || "template_o3tahyw";
   const PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || "DCfhlASrfFiifdW7M";
 
