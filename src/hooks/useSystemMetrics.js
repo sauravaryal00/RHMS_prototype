@@ -44,8 +44,8 @@ export const useSystemMetrics = () => {
       }
     };
 
-    fetchLocalMetrics();
-    const interval = setInterval(fetchLocalMetrics, 5000);
+    fetchData();
+    const interval = setInterval(fetchData, 5000);
     return () => clearInterval(interval);
   }, []);
 
