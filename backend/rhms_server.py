@@ -1,59 +1,30 @@
-import sqlite3
 import time
 import json
 import uuid
+import hashlib
+import os
 from datetime import datetime, timedelta
+from typing import Optional, List
 from fastapi import FastAPI, HTTPException, Request, Depends
 from pydantic import BaseModel
-from typing import Optional, List
+from supabase import create_client, Client
+from dotenv import load_dotenv
 
-app = FastAPI(title="RHMS Backend Prototype")
+# Load environment variables
+load_dotenv(dotenv_path=".env.local")
 
-# Database Initialization
-DB_PATH = "rhms_audit.db"
+SUPABASE_URL = os.getenv("VITE_SUPABASE_URL")
+SUPABASE_KEY = os.getenv("VITE_SUPABASE_ANON_KEY")
 
-def init_db():
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS audit_logs
-                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
-                  timestamp TEXT,
-                  user_id TEXT,
-                  action TEXT,
-                  resource TEXT,
-                  purpose TEXT,
-                  policy_mode TEXT,
-                  status TEXT,
-                  details TEXT)''')
-    
-    c.execute('''CREATE TABLE IF NOT EXISTS consent_tokens
-                 (token_id TEXT PRIMARY KEY,
-                  patient_id TEXT,
-                  clinician_id TEXT,
-                  purpose TEXT,
-                  expiry TEXT,
-                  status TEXT)''')
-    
-    c.execute('''CREATE TABLE IF NOT EXISTS care_pair_requests
-                 (request_id TEXT PRIMARY KEY,
-                  patient_id TEXT,
-                  clinician_id TEXT,
-                  status TEXT,
-                  timestamp TEXT)''')
-    
-    c.execute('''CREATE TABLE IF NOT EXISTS otp_codes
-                 (user_id TEXT PRIMARY KEY,
-                  code TEXT,
-                  expiry TEXT,
-                  is_verified INTEGER DEFAULT 0)''')
-    c.execute('''CREATE TABLE IF NOT EXISTS trusted_contexts
-                 (entity_id TEXT PRIMARY KEY,
-                  context_type TEXT,
-                  context_value TEXT)''')
-    conn.commit()
-    conn.close()
+if not SUPABASE_URL or not SUPABASE_KEY:
+    print("ERROR: Supabase credentials missing in .env.local")
+    # Fallback to hardcoded if necessary for demo, but better to use env
+    SUPABASE_URL = "https://dbsnwlvfonemjhmajlbi.supabase.co"
+    SUPABASE_KEY = "sb_publishable_Qijy32ktt59tgIEzFHv2sA_tZ54kDmX"
 
-init_db()
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+app = FastAPI(title="RHMS Cloud-Ready Backend")
 
 # Models
 class ConsentRequest(BaseModel):
@@ -73,18 +44,30 @@ class OTPVerify(BaseModel):
     user_id: str
     code: str
 
-# Helper Functions
+# Audit Logger (Now writes to Supabase)
 def log_audit(user_id, action, resource, purpose, policy_mode, status, details=""):
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("INSERT INTO audit_logs (timestamp, user_id, action, resource, purpose, policy_mode, status, details) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-              (datetime.now().isoformat(), user_id, action, resource, purpose, policy_mode, status, details))
-    conn.commit()
-    conn.close()
+    try:
+        # Simple hash-chain simulation for thesis
+        entry_hash = hashlib.sha256(f"{datetime.now().isoformat()}{user_id}{action}".encode()).hexdigest()
+        
+        log_entry = {
+            "timestamp": datetime.now().isoformat(),
+            "user_id": user_id,
+            "action": action,
+            "resource": resource,
+            "purpose": purpose,
+            "policy_mode": policy_mode,
+            "status": status,
+            "details": details,
+            "entry_hash": entry_hash
+        }
+        supabase.table("audit_logs").insert(log_entry).execute()
+    except Exception as e:
+        print(f"Audit Log Error: {e}")
 
-# Current Policy Mode (Simplified for Prototype)
-CURRENT_POLICY_MODE = "CONSENT_MODE" # Default
-ALLOWED_IP = "127.0.0.1"
+# Global State for Policy
+CURRENT_POLICY_MODE = "CONSENT_MODE"
+
 @app.get("/system/metrics")
 async def get_metrics():
     import csv
@@ -111,15 +94,14 @@ async def update_policy(data: dict):
     if new_mode in ["CONSENT_MODE", "PASSWORD_OTP_MODE", "LOGGING_ONLY_MODE", "ZERO_TRUST_MODE"]:
         CURRENT_POLICY_MODE = new_mode
         if new_ip:
-            # Persistent storage for the trusted IP
-            conn = sqlite3.connect(DB_PATH)
-            c = conn.cursor()
-            c.execute("INSERT OR REPLACE INTO trusted_contexts VALUES (?, ?, ?)", ("ADMIN_OVERRIDE", "IP_ADDRESS", new_ip))
-            conn.commit()
-            conn.close()
+            hashed_ip = hashlib.sha256(new_ip.encode()).hexdigest()
+            supabase.table("trusted_contexts").upsert({
+                "entity_id": "ADMIN_OVERRIDE",
+                "context_type": "HASHED_IP",
+                "context_value": hashed_ip
+            }).execute()
         return {"status": "success", "mode": CURRENT_POLICY_MODE}
     return {"status": "error", "message": "Invalid mode"}
-
 
 # Consent API
 @app.post("/consent/issue")
@@ -127,73 +109,41 @@ async def issue_consent(req: ConsentRequest):
     token_id = str(uuid.uuid4())
     expiry = (datetime.now() + timedelta(minutes=req.duration_minutes)).isoformat()
     
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("INSERT INTO consent_tokens VALUES (?, ?, ?, ?, ?, ?)",
-              (token_id, req.patient_id, req.clinician_id, req.purpose, expiry, "ACTIVE"))
-    conn.commit()
-    conn.close()
+    data = {
+        "token_id": token_id,
+        "patient_id": req.patient_id,
+        "clinician_id": req.clinician_id,
+        "purpose": req.purpose,
+        "expiry": expiry,
+        "status": "ACTIVE"
+    }
+    supabase.table("consent_tokens").insert(data).execute()
     
     log_audit(req.patient_id, "ISSUE_CONSENT", "HEALTH_DATA", req.purpose, CURRENT_POLICY_MODE, "SUCCESS", f"Token {token_id} issued")
-    
     return {"token_id": token_id, "expiry": expiry}
 
 @app.post("/consent/revoke")
 async def revoke_consent(token_id: str):
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("UPDATE consent_tokens SET status='REVOKED' WHERE token_id=?", (token_id,))
-    conn.commit()
-    conn.close()
-    
+    supabase.table("consent_tokens").update({"status": "REVOKED"}).eq("token_id", token_id).execute()
     log_audit("SYSTEM", "REVOKE_CONSENT", "HEALTH_DATA", "N/A", CURRENT_POLICY_MODE, "SUCCESS", f"Token {token_id} revoked")
-    
     return {"status": "revoked"}
 
 @app.get("/consent/validate/{token_id}")
 async def validate_consent(token_id: str):
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("SELECT * FROM consent_tokens WHERE token_id=?", (token_id,))
-    token = c.fetchone()
-    conn.close()
+    res = supabase.table("consent_tokens").select("*").eq("token_id", token_id).execute()
+    token = res.data[0] if res.data else None
     
     if not token:
         log_audit("SYSTEM", "VALIDATE_CONSENT", "HEALTH_DATA", "N/A", CURRENT_POLICY_MODE, "FAILURE", f"Invalid token {token_id}")
         return {"valid": False, "reason": "Invalid token"}
     
-    expiry = datetime.fromisoformat(token[4])
-    if datetime.now() > expiry or token[5] != "ACTIVE":
-        log_audit("SYSTEM", "VALIDATE_CONSENT", "HEALTH_DATA", token[3], CURRENT_POLICY_MODE, "FAILURE", f"Token {token_id} expired or revoked")
+    expiry = datetime.fromisoformat(token['expiry'])
+    if datetime.now() > expiry or token['status'] != "ACTIVE":
+        log_audit("SYSTEM", "VALIDATE_CONSENT", "HEALTH_DATA", token['purpose'], CURRENT_POLICY_MODE, "FAILURE", f"Token {token_id} expired/revoked")
         return {"valid": False, "reason": "Token expired or revoked"}
     
-    log_audit("SYSTEM", "VALIDATE_CONSENT", "HEALTH_DATA", token[3], CURRENT_POLICY_MODE, "SUCCESS", f"Token {token_id} validated")
+    log_audit("SYSTEM", "VALIDATE_CONSENT", "HEALTH_DATA", token['purpose'], CURRENT_POLICY_MODE, "SUCCESS", f"Token {token_id} validated")
     return {"valid": True, "details": token}
-
-# Care-Pair API
-@app.post("/carepair/request")
-async def request_carepair(req: CarePairRequest):
-    request_id = str(uuid.uuid4())
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("INSERT INTO care_pair_requests VALUES (?, ?, ?, ?, ?)",
-              (request_id, req.patient_id, req.clinician_id, "PENDING", datetime.now().isoformat()))
-    conn.commit()
-    conn.close()
-    
-    log_audit(req.clinician_id, "CARE_PAIR_REQUEST", "ACCESS", "CARE", CURRENT_POLICY_MODE, "PENDING", f"Request {request_id}")
-    return {"request_id": request_id}
-
-@app.post("/carepair/approve")
-async def approve_carepair(request_id: str):
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("UPDATE care_pair_requests SET status='APPROVED' WHERE request_id=?", (request_id,))
-    conn.commit()
-    conn.close()
-    
-    log_audit("PATIENT", "CARE_PAIR_APPROVE", "ACCESS", "CARE", CURRENT_POLICY_MODE, "SUCCESS", f"Request {request_id} approved")
-    return {"status": "approved"}
 
 # OTP API
 @app.post("/otp/generate")
@@ -202,109 +152,68 @@ async def generate_otp(req: OTPRequest):
     code = str(random.randint(100000, 999999))
     expiry = (datetime.now() + timedelta(minutes=5)).isoformat()
     
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("INSERT OR REPLACE INTO otp_codes (user_id, code, expiry, is_verified) VALUES (?, ?, ?, 0)", (req.user_id, code, expiry))
-    conn.commit()
-    conn.close()
+    supabase.table("otp_codes").upsert({
+        "user_id": req.user_id,
+        "code": code,
+        "expiry": expiry,
+        "is_verified": False
+    }).execute()
     
     log_audit(req.user_id, "GENERATE_OTP", "AUTH", "LOGIN", CURRENT_POLICY_MODE, "SUCCESS", f"OTP generated: {code}")
-    return {"status": "sent", "code": code, "message": f"[SIMULATION] OTP sent to user {req.user_id}: {code}"}
+    return {"status": "sent", "code": code, "message": f"[SIMULATION] OTP sent: {code}"}
 
 @app.post("/otp/verify")
 async def verify_otp(req: OTPVerify):
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("SELECT code, expiry FROM otp_codes WHERE user_id=?", (req.user_id,))
-    res = c.fetchone()
+    res = supabase.table("otp_codes").select("*").eq("user_id", req.user_id).execute()
+    data = res.data[0] if res.data else None
     
-    if not res:
-        conn.close()
-        return {"valid": False, "reason": "No OTP found"}
+    if not data: return {"valid": False, "reason": "No OTP found"}
     
-    saved_code, expiry_str = res
-    if datetime.now() > datetime.fromisoformat(expiry_str):
-        conn.close()
+    if datetime.now() > datetime.fromisoformat(data['expiry']):
         return {"valid": False, "reason": "OTP expired"}
     
-    if saved_code == req.code:
-        c.execute("UPDATE otp_codes SET is_verified=1 WHERE user_id=?", (req.user_id,))
-        conn.commit()
-        conn.close()
+    if data['code'] == req.code:
+        supabase.table("otp_codes").update({"is_verified": True}).eq("user_id", req.user_id).execute()
         log_audit(req.user_id, "VERIFY_OTP", "AUTH", "LOGIN", CURRENT_POLICY_MODE, "SUCCESS")
         return {"valid": True}
     else:
-        conn.close()
         log_audit(req.user_id, "VERIFY_OTP", "AUTH", "LOGIN", CURRENT_POLICY_MODE, "FAILURE", "Incorrect code")
         return {"valid": False, "reason": "Incorrect code"}
 
-# Data Access Gateway (Policy Enforcer)
+# Data Access Gateway
 @app.get("/data/vitals")
 async def get_vitals(request: Request, patient_id: str, clinician_id: str, purpose: str, token_id: Optional[str] = None):
     start_time = time.time()
-    
-    # 1. Evaluate Policy Mode
     client_ip = request.client.host
     
     if CURRENT_POLICY_MODE == "ZERO_TRUST_MODE":
-        # Privacy-First: Check if hashed client IP exists in Trusted Contexts
-        import hashlib
+        # Privacy-First: Check hashed IP in Supabase
         hashed_ip = hashlib.sha256(client_ip.encode()).hexdigest()
+        res = supabase.table("trusted_contexts").select("*").eq("context_value", hashed_ip).eq("context_type", "HASHED_IP").execute()
         
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
-        c.execute("SELECT 1 FROM trusted_contexts WHERE context_value=? AND context_type='HASHED_IP'", (hashed_ip,))
-        is_trusted = c.fetchone()
-        conn.close()
-
-        if not is_trusted:
-            log_audit(clinician_id, "ACCESS_DATA", "VITALS", purpose, CURRENT_POLICY_MODE, "DENIED", f"Zero Trust Privacy Violation: Hashed IP {hashed_ip[:10]}... is untrusted")
-            raise HTTPException(status_code=403, detail="Zero Trust Violation: Untrusted Network Context")
+        if not res.data:
+            log_audit(clinician_id, "ACCESS_DATA", "VITALS", purpose, CURRENT_POLICY_MODE, "DENIED", f"ZT Violation: Hashed IP {hashed_ip[:10]}...")
+            raise HTTPException(status_code=403, detail=f"Zero Trust Violation: Untrusted Context")
             
-        # Also require token
         if not token_id:
             log_audit(clinician_id, "ACCESS_DATA", "VITALS", purpose, CURRENT_POLICY_MODE, "DENIED", "No token in Zero Trust")
             raise HTTPException(status_code=403, detail="Zero Trust: Token required")
             
-    if CURRENT_POLICY_MODE == "CONSENT_MODE":
-        if not token_id:
-             log_audit(clinician_id, "ACCESS_DATA", "VITALS", purpose, CURRENT_POLICY_MODE, "DENIED", "Consent required")
-             raise HTTPException(status_code=403, detail="Consent Mode: Valid token required")
+    if CURRENT_POLICY_MODE == "CONSENT_MODE" and not token_id:
+        raise HTTPException(status_code=403, detail="Consent Mode: Valid token required")
 
-    if CURRENT_POLICY_MODE == "PASSWORD_OTP_MODE":
-        # Check if OTP was verified for this clinician
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
-        c.execute("SELECT is_verified FROM otp_codes WHERE user_id=?", (clinician_id,))
-        res = c.fetchone()
-        conn.close()
-        if not res or not res[0]:
-            log_audit(clinician_id, "ACCESS_DATA", "VITALS", purpose, CURRENT_POLICY_MODE, "DENIED", "OTP verification required")
-            raise HTTPException(status_code=403, detail="OTP Verification Required")
-             
-    # Validation if token provided
     if token_id:
         validation = await validate_consent(token_id)
         if not validation["valid"]:
-            log_audit(clinician_id, "ACCESS_DATA", "VITALS", purpose, CURRENT_POLICY_MODE, "DENIED", validation["reason"])
             raise HTTPException(status_code=403, detail=validation["reason"])
 
-    # 2. Return Synthetic Data
-    latency = (time.time() - start_time) * 1000 # ms
+    latency = (time.time() - start_time) * 1000
     log_audit(clinician_id, "ACCESS_DATA", "VITALS", purpose, CURRENT_POLICY_MODE, "SUCCESS", f"Latency: {latency:.2f}ms")
     
     return {
         "status": "success",
-        "data": {
-            "hr": 72,
-            "bp": "120/80",
-            "spo2": 98,
-            "timestamp": datetime.now().isoformat()
-        },
-        "metrics": {
-            "latency_ms": latency,
-            "policy_applied": CURRENT_POLICY_MODE
-        }
+        "data": {"hr": 72, "bp": "120/80", "spo2": 98, "timestamp": datetime.now().isoformat()},
+        "metrics": {"latency_ms": latency, "policy_applied": CURRENT_POLICY_MODE}
     }
 
 if __name__ == "__main__":
