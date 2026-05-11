@@ -8,13 +8,13 @@ import { useConsentTokens } from '../hooks/useConsentTokens';
 import { useSystemMetrics } from '../hooks/useSystemMetrics';
 
 const AdminDashboard = () => {
-  const { history, connectionStatus } = useRealtimeVitals('patient-42');
-  const { tokens } = useConsentTokens();
-  const { avgLatency, securityScore, blockedAttempts } = useSystemMetrics();
+  const { history = [], connectionStatus = "Disconnected" } = useRealtimeVitals('patient-42');
+  const { tokens = [] } = useConsentTokens();
+  const { avgLatency = "0", securityScore = "0", blockedAttempts = 0 } = useSystemMetrics();
 
   const stats = [
-    { label: 'Security Score', value: `${securityScore}%`, icon: ShieldCheck, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-    { label: 'Avg Latency', value: `${avgLatency}ms`, icon: Activity, color: 'text-blue-500', bg: 'bg-blue-50' },
+    { label: 'Security Score', value: `${securityScore || 0}%`, icon: ShieldCheck, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+    { label: 'Avg Latency', value: `${avgLatency || 0}ms`, icon: Activity, color: 'text-blue-500', bg: 'bg-blue-50' },
     { label: 'Active Tokens', value: tokens?.filter(t => !t.revoked).length || 0, icon: Zap, color: 'text-amber-500', bg: 'bg-amber-50' },
     { label: 'Blocked Attempts', value: blockedAttempts || 0, icon: AlertTriangle, color: 'text-red-500', bg: 'bg-red-50' },
   ];
