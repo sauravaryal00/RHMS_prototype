@@ -14,14 +14,20 @@ import Sidebar from '../components/Sidebar';
 import { useSystemMetrics } from '../hooks/useSystemMetrics';
 
 const BaselineComparison = () => {
-  const { avgLatency, securityScore } = useSystemMetrics();
+  const { experimentResults, securityScore } = useSystemMetrics();
   const [activeMode, setActiveMode] = useState('consent');
 
+  // Helper to find metric from experiment results
+  const getLat = (testName) => {
+    const res = experimentResults.find(r => r.test_name === testName);
+    return res ? parseFloat(res.avg_latency_ms) : 0;
+  };
+
   const modes = [
-    { id: 'consent', name: 'Consent Token (Proposed)', icon: ShieldCheck, color: 'text-primary', borderColor: 'border-primary' },
-    { id: 'baseline1', name: 'Password + OTP', icon: Lock, color: 'text-success', borderColor: 'border-success' },
-    { id: 'baseline2', name: 'RBAC + Logging', icon: Users, color: 'text-warning', borderColor: 'border-warning' },
-    { id: 'baseline3', name: 'Zero Trust Gateway', icon: Globe, color: 'text-danger', borderColor: 'border-danger' },
+    { id: 'consent', name: 'Consent Token (Proposed)', icon: ShieldCheck, color: 'text-primary', borderColor: 'border-primary', testName: 'Normal Access' },
+    { id: 'baseline1', name: 'Password + OTP', icon: Lock, color: 'text-success', borderColor: 'border-success', testName: 'OTP Mode (Verified)' },
+    { id: 'baseline2', name: 'RBAC + Logging', icon: Users, color: 'text-warning', borderColor: 'border-warning', testName: 'No-Policy Baseline' },
+    { id: 'baseline3', name: 'Zero Trust Gateway', icon: Globe, color: 'text-danger', borderColor: 'border-danger', testName: 'Strict Security' },
   ];
 
   const features = [
@@ -34,8 +40,8 @@ const BaselineComparison = () => {
   ];
 
   const metrics = [
-    { label: 'Decision Latency (sec)', values: [avgLatency, 0.45, 0.15, 0.85] },
-    { label: 'Security Score', values: [securityScore, 65, 40, 88] },
+    { label: 'Latency (ms)', values: [getLat('Normal Access'), getLat('OTP Mode (Verified)'), getLat('No-Policy Baseline'), getLat('Strict Security')] },
+    { label: 'Security Score', values: [securityScore, 65, 40, 95] },
   ];
 
   return (

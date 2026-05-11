@@ -8,6 +8,11 @@ import { useAuth } from '../context/AuthContext'
 import emailjs from '@emailjs/browser'
 
 const LoginPage = () => {
+  // --- EMAILJS CONFIG (Using Environment Variables) ---
+  const SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID || "service_qiz4qnd"; 
+  const TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID || "template_o3tahyw";
+  const PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || "DCfhlASrfFiifdW7M";
+
   const { role: urlRole } = useParams();
   const location = useLocation();
   const [step, setStep] = useState(1);
@@ -23,6 +28,10 @@ const LoginPage = () => {
   const { login, authMessage, setAuthMessage } = useAuth()
 
   useEffect(() => {
+    if (PUBLIC_KEY && PUBLIC_KEY !== "user_xxxxxxxxx") {
+      emailjs.init(PUBLIC_KEY);
+    }
+    
     // Check for message in navigation state (from ProtectedRoute)
     if (location.state?.message) {
       setAuthMessage(location.state.message);
@@ -36,10 +45,6 @@ const LoginPage = () => {
     return () => setAuthMessage('');
   }, [location.state, urlRole]);
 
-  // --- EMAILJS CONFIG ---
-  const SERVICE_ID = "service_qiz4qnd"; 
-  const TEMPLATE_ID = "template_7j39999";
-  const PUBLIC_KEY = "user_xxxxxxxxx";
 
   const handlePasswordSubmit = async (e) => {
     e.preventDefault()
@@ -62,10 +67,23 @@ const LoginPage = () => {
         const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
         setGeneratedOtp(newOtp);
         try {
-          await emailjs.send(SERVICE_ID, TEMPLATE_ID, { to_name: "Saurav", to_email: "sauravaryal1122@gmail.com", otp_code: newOtp }, PUBLIC_KEY);
+          const templateParams = {
+            to_name: "Saurav",
+            to_email: "sauravaryal1122@gmail.com",
+            user_email: "sauravaryal1122@gmail.com",
+            email: "sauravaryal1122@gmail.com",
+            recipient: "sauravaryal1122@gmail.com",
+            otp_code: newOtp,
+            passcode: newOtp,
+            reply_to: "sauravaryal1122@gmail.com"
+          };
+          
+          await emailjs.send(SERVICE_ID, TEMPLATE_ID, templateParams, PUBLIC_KEY);
           setStep(2);
         } catch (err) {
-          setError("Email Service Error. Using Master OTP 123456.");
+          console.error("EmailJS Error Object:", err);
+          const errorMsg = err.text || err.message || JSON.stringify(err);
+          setError(`Email Service Error: ${errorMsg}. Using Master OTP 123456.`);
           setStep(2); 
         }
       }

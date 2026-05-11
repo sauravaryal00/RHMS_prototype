@@ -8,24 +8,30 @@ import {
   Clock,
   TrendingDown,
   Download,
-  AlertCircle
+  AlertCircle,
+  Activity
 } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
-
 import { useSystemMetrics } from '../hooks/useSystemMetrics';
 
 const LoadTestResults = () => {
-  const { avgLatency, securityScore, errorRate, totalRequests, blockedAttempts } = useSystemMetrics();
+  const { experimentResults, securityScore, errorRate, totalRequests, blockedAttempts } = useSystemMetrics();
+
+  // Helper to find metric from experiment results
+  const getLat = (testName) => {
+    const res = experimentResults.find(r => r.test_name === testName);
+    return res ? res.avg_latency_ms : '0';
+  };
+
+  const avgLatency = getLat('Normal Access');
 
   const experiments = [
-    { id: 'BASELINE-1', name: 'Legacy OTP Authentication (Static)', status: 'Resolved', progress: 100, latency: '450ms', security: '65%' },
-    { id: 'PROPOSED', name: 'Interactive Consent-as-Authentication', status: 'Live', progress: 100, latency: `${avgLatency}s`, security: `${securityScore}%` },
-    { id: 'EXP-01', name: 'Normal access with valid consent token', status: 'Tested', progress: 100 },
-    { id: 'EXP-02', name: 'Wrong-purpose token presented', status: 'Tested', progress: 100 },
-    { id: 'EXP-03', name: 'Expired token presented', status: 'Tested', progress: 100 },
-    { id: 'EXP-04', name: 'Token revoked during session', status: 'Tested', progress: 100 },
-    { id: 'EXP-05', name: 'No token provided', status: 'Tested', progress: 100 },
-    { id: 'EXP-06', name: 'Care-Pair: both parties approve', status: 'In Progress', progress: 50 },
+    { id: 'BASELINE-1', name: 'Legacy OTP Authentication (Static)', status: 'Tested', progress: 100, latency: `${getLat('OTP Mode (Verified)')}ms`, security: '65%' },
+    { id: 'PROPOSED', name: 'Interactive Consent-as-Authentication', status: 'Live', progress: 100, latency: `${avgLatency}ms`, security: `${securityScore}%` },
+    { id: 'EXP-01', name: 'Normal access with valid consent token', status: 'Tested', progress: 100, latency: `${getLat('Normal Access')}ms` },
+    { id: 'EXP-02', name: 'Wrong-purpose token presented', status: 'Tested', progress: 100, latency: `${getLat('Revoked Access Attempt')}ms` },
+    { id: 'EXP-03', name: 'No-Policy Baseline Performance', status: 'Tested', progress: 100, latency: `${getLat('No-Policy Baseline')}ms` },
+    { id: 'EXP-04', name: 'Zero Trust Strict Security', status: 'Tested', progress: 100, latency: `${getLat('Strict Security')}ms` },
   ];
 
   return (
@@ -46,7 +52,7 @@ const LoadTestResults = () => {
             <div className="w-px h-8 bg-white/10" />
             <div className="px-4 py-2 text-center">
               <div className="text-[10px] text-muted font-bold uppercase">Decision Latency</div>
-              <div className="text-xl font-bold text-primary">{avgLatency}s</div>
+              <div className="text-xl font-bold text-primary">{avgLatency}ms</div>
             </div>
           </div>
         </header>
@@ -99,7 +105,7 @@ const LoadTestResults = () => {
                 </h4>
                 <div className="flex items-end gap-1 mb-4">
                   <div className="text-5xl font-bold font-mono">{avgLatency}</div>
-                  <div className="text-xl font-medium text-muted mb-1">sec</div>
+                  <div className="text-xl font-medium text-muted mb-1">ms</div>
                 </div>
                 <div className="text-[10px] text-muted italic">
                   *Calculated as average of Δ(Approval - Request) for all interactive handshakes.

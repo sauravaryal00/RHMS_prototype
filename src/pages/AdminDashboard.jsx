@@ -112,6 +112,48 @@ const AdminDashboard = () => {
           </div>
         </div>
 
+        {/* Policy Mode Switcher (Live Thesis Control) */}
+        <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="font-black text-slate-800 text-lg uppercase tracking-widest">Active Security Policy</h3>
+            <div className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-bold uppercase tracking-widest border border-blue-100">
+              Live Gateway Control
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {[
+              { id: 'CONSENT_MODE', name: 'Consent Token', icon: ShieldCheck, desc: 'Proposed Protocol' },
+              { id: 'PASSWORD_OTP_MODE', name: 'Password + OTP', icon: Lock, desc: 'Baseline 1' },
+              { id: 'LOGGING_ONLY_MODE', name: 'Logging Only', icon: History, desc: 'Audit Active' },
+              { id: 'ZERO_TRUST_MODE', name: 'Zero Trust', icon: Globe, desc: 'Strict Default Deny' }
+            ].map((mode) => (
+              <button
+                key={mode.id}
+                onClick={async () => {
+                  try {
+                    await fetch('http://127.0.0.1:8000/system/policy', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ mode: mode.id })
+                    });
+                    alert(`Policy Switched to: ${mode.name}`);
+                  } catch (err) {
+                    alert('Backend connection error');
+                  }
+                }}
+                className="flex flex-col items-center p-6 rounded-2xl border border-slate-100 bg-slate-50 hover:bg-white hover:border-blue-200 hover:shadow-md transition-all text-center group"
+              >
+                <div className="w-12 h-12 rounded-xl bg-white border border-slate-200 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                  <mode.icon size={20} className="text-blue-500" />
+                </div>
+                <div className="text-xs font-black text-slate-800 uppercase tracking-widest">{mode.name}</div>
+                <div className="text-[10px] text-slate-400 font-bold mt-1">{mode.desc}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Real-Time Vitals Feed (Light Theme Version) */}
         <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
           <h3 className="font-black text-slate-800 text-lg mb-6 flex items-center gap-2">
