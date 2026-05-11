@@ -57,7 +57,7 @@ const LoginPage = () => {
     // 1. Try Supabase Auth
     if (supabase) {
       try {
-        const { data } = await supabase.from('profiles').select('*').eq('email', email).eq('password', password).eq('role', selectedRole).single();
+        const { data } = await supabase.from('profiles').select('*').eq('email', email).eq('password', password).eq('role', selectedRole).maybeSingle();
         if (data) success = true;
       } catch (e) {
         console.warn("Supabase auth failed, trying local fallback...");
