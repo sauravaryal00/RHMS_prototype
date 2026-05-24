@@ -22,6 +22,7 @@ const CaregiverDashboard = () => {
     : [];
   
   const pendingCoApproval = pendingCoApprovals[0];
+  const isAutoEscalated = !!(pendingCoApproval?.is_auto_escalated || pendingCoApproval?.purpose?.includes('[PATIENT_UNRESPONSIVE]'));
   const [timeLeft, setTimeLeft] = useState(300);
 
   useEffect(() => {
@@ -72,7 +73,7 @@ const CaregiverDashboard = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
           {/* Main Action Area */}
-          <div className={`bg-white p-8 rounded-3xl border shadow-md min-h-[500px] flex flex-col transition-all duration-500 ${pendingCoApproval?.is_auto_escalated ? 'border-red-300 shadow-[0_0_50px_rgba(239,68,68,0.05)] ring-1 ring-red-100' : 'border-slate-200'}`}>
+          <div className={`bg-white p-8 rounded-3xl border shadow-md min-h-[500px] flex flex-col transition-all duration-500 ${isAutoEscalated ? 'border-red-300 shadow-[0_0_50px_rgba(239,68,68,0.05)] ring-1 ring-red-100' : 'border-emerald-300 shadow-[0_0_50px_rgba(16,185,129,0.05)] ring-1 ring-emerald-100'}`}>
             {!pendingCoApproval ? (
               <div className="flex-1 flex flex-col items-center justify-center text-center p-12">
                 <div className="w-24 h-24 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-500 mb-6">
@@ -92,12 +93,21 @@ const CaregiverDashboard = () => {
                 >
                   <div className="flex justify-between items-start mb-6">
                     <div className="flex flex-col gap-2 w-full">
-                      <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700">
-                        <div className="font-bold flex items-center gap-2 mb-1 uppercase text-xs tracking-widest">
-                          <AlertCircle size={16} /> System-Verified Emergency Override Request
+                      {isAutoEscalated ? (
+                        <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700">
+                          <div className="font-bold flex items-center gap-2 mb-1 uppercase text-xs tracking-widest text-red-800">
+                            <AlertCircle size={16} /> System-Verified Emergency Override Request
+                          </div>
+                          <p className="text-sm">The patient did not respond within the defined 15-second time window, triggering this emergency escalation to you as their verified Caregiver.</p>
                         </div>
-                        <p className="text-sm">The patient did not respond within the defined 15-second time window, triggering this emergency escalation to you as their verified Caregiver.</p>
-                      </div>
+                      ) : (
+                        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800">
+                          <div className="font-bold flex items-center gap-2 mb-1 uppercase text-xs tracking-widest text-emerald-700">
+                            <CheckCircle2 size={16} /> Patient-Authorized Dual Consent Request
+                          </div>
+                          <p className="text-sm">The patient has authorized this access request. As their verified Caregiver, your dual-authorization is required to release the vitals data stream.</p>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -142,7 +152,7 @@ const CaregiverDashboard = () => {
                     </div>
                   </div>
 
-                  <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                  <div className={`mt-6 p-4 rounded-xl border ${isAutoEscalated ? 'bg-red-50/50 border-red-100' : 'bg-emerald-50/50 border-emerald-100'}`}>
                     <label className="flex items-start gap-3 cursor-pointer">
                       <input 
                         type="checkbox" 
@@ -151,8 +161,17 @@ const CaregiverDashboard = () => {
                         onChange={(e) => setIsConfirmed(e.target.checked)}
                       />
                       <div className="text-sm text-slate-700">
-                        <span className="font-bold block">I confirm this is an emergency override.</span>
-                        As a registered and verified emergency contact, I authorize this view-only access. I understand this action is recorded and auditable.
+                        {isAutoEscalated ? (
+                          <>
+                            <span className="font-bold block text-red-700">I confirm this is an emergency override.</span>
+                            As a registered and verified emergency contact, I authorize this view-only access. I understand this action is recorded and auditable.
+                          </>
+                        ) : (
+                          <>
+                            <span className="font-bold block text-emerald-700">I authorize this access request.</span>
+                            As a registered and verified caregiver, I approve this request alongside the patient. I understand this action is recorded and auditable.
+                          </>
+                        )}
                       </div>
                     </label>
                   </div>
@@ -164,9 +183,13 @@ const CaregiverDashboard = () => {
                         setProcessingId(pendingCoApproval.id);
                         await approveAsCaregiver(pendingCoApproval.id);
                       }}
-                      className={`flex-1 h-16 text-white text-xl font-black rounded-xl transition-all shadow-md ${isConfirmed ? 'bg-emerald-500 hover:bg-emerald-600 hover:scale-[1.02] active:scale-95' : 'bg-slate-300 cursor-not-allowed'}`}
+                      className={`flex-1 h-16 text-white text-xl font-black rounded-xl transition-all shadow-md ${
+                        isConfirmed 
+                          ? (isAutoEscalated ? 'bg-red-500 hover:bg-red-600 shadow-red-500/20' : 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20')
+                          : 'bg-slate-300 cursor-not-allowed'
+                      } hover:scale-[1.02] active:scale-95`}
                     >
-                      APPROVE OVERRIDE
+                      {isAutoEscalated ? 'APPROVE OVERRIDE' : 'APPROVE REQUEST'}
                     </button>
                     <button 
                       onClick={async () => {
@@ -194,11 +217,19 @@ const CaregiverDashboard = () => {
               <div className="space-y-6">
                 <div className="flex gap-4">
                   <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center shrink-0 font-bold border border-slate-200">1</div>
-                  <p className="text-sm text-slate-600 leading-relaxed">System identified high-risk heart/vital data request. Patient did not respond in 15s.</p>
+                  <p className="text-sm text-slate-600 leading-relaxed">
+                    {isAutoEscalated 
+                      ? "System identified high-risk heart/vital data request. Patient did not respond in 15s."
+                      : "System identified high-risk heart/vital data request. Patient authorized the access."}
+                  </p>
                 </div>
                 <div className="flex gap-4">
                   <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center shrink-0 font-bold font-mono">2</div>
-                  <p className="text-sm font-bold text-slate-800 leading-relaxed">Requirement: Emergency Override. You must verify the clinician's purpose before final token issuance.</p>
+                  <p className="text-sm font-bold text-slate-800 leading-relaxed">
+                    {isAutoEscalated
+                      ? "Requirement: Emergency Override. You must verify the clinician's purpose before final token issuance."
+                      : "Requirement: Caregiver Co-Approval. You must authorize this request as a verified caregiver to release the data."}
+                  </p>
                 </div>
               </div>
             </div>

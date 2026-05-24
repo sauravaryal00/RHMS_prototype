@@ -33,14 +33,24 @@ const ClinicianDashboard = () => {
   const [purpose, setPurpose] = useState('Emergency cardiac anomaly detected – clinician review required');
   const [duration, setDuration] = useState(30);
   
-  const { tokens, requests, requestAccess } = useConsentTokens();
+  // BUG FIX: Pass patientId so the hook server-filters tokens/requests/logs
+  // for the selected patient instead of fetching everything unfiltered.
+  const { tokens, requests, requestAccess } = useConsentTokens(patientId);
   const { vitals, history, connectionStatus } = useRealtimeVitals(patientId);
 
   // Check for active token or pending request
-  const activeToken = tokens?.find(t => t.clinician_id === selectedClinician.id && !t.revoked && t.patient_id === patientId);
-  const pendingRequest = requests?.find(r => 
-    r.clinician_id === selectedClinician.id && 
-    r.patient_id === patientId && 
+  // BUG FIX: Use case-insensitive comparison for patient_id to avoid mismatches
+  // when the DB stores the ID in a different case than the state variable.
+  const activeToken = tokens?.find(t =>
+    t.clinician_id === selectedClinician.id &&
+    !t.revoked &&
+    t.status !== 'revoked' &&
+    t.patient_id?.toLowerCase() === patientId?.toLowerCase() &&
+    new Date(t.expires_at) > new Date()
+  );
+  const pendingRequest = requests?.find(r =>
+    r.clinician_id === selectedClinician.id &&
+    r.patient_id?.toLowerCase() === patientId?.toLowerCase() &&
     (r.status === 'pending' || r.status === 'pending_caregiver')
   );
 
@@ -118,27 +128,27 @@ const ClinicianDashboard = () => {
               
               <form onSubmit={handleRequestAccess} className="space-y-4">
                 <div>
-                  <label className="text-[10px] text-muted uppercase font-bold tracking-widest block mb-2">Patient ID</label>
+                  <label className="text-xs text-slate-500 uppercase font-bold tracking-widest block mb-2">Patient ID</label>
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted w-4 h-4" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                     <input 
                       type="text" 
                       value={patientId}
                       onChange={(e) => setPatientId(e.target.value)}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2 focus:outline-none focus:border-primary/50 text-sm"
+                      className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:border-blue-500 text-sm"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-[10px] text-muted uppercase font-bold tracking-widest block mb-2">Select Clinician</label>
+                  <label className="text-xs text-slate-500 uppercase font-bold tracking-widest block mb-2">Select Clinician</label>
                   <select 
                     value={selectedClinician.id}
                     onChange={(e) => setSelectedClinician(clinicians.find(c => c.id === e.target.value))}
-                    className="w-full bg-surface border border-white/10 rounded-xl px-4 py-2 focus:outline-none focus:border-primary/50 text-sm appearance-none"
+                    className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 text-sm appearance-none"
                   >
                     {clinicians.map(c => (
-                      <option key={c.id} value={c.id}>{c.name} ({c.role})</option>
+                      <option key={c.id} value={c.id} className="text-slate-800">{c.name} ({c.role})</option>
                     ))}
                   </select>
                 </div>

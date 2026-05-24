@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
 import { useConsentTokens } from '../hooks/useConsentTokens';
-import { useAuditLogs } from '../hooks/useAuditLogs';
+// useAuditLogs removed — logs already come from useConsentTokens('patient-42')
 import CountdownTimer from '../components/CountdownTimer';
 import LogDetailModal from '../components/LogDetailModal';
 
@@ -30,6 +30,7 @@ const PatientDashboard = () => {
   const [activeReqId, setActiveReqId] = useState(null);
   const [selectedLog, setSelectedLog] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isActionPending, setIsActionPending] = useState(false);
 
   useEffect(() => {
     if (requests && requests.length > 0) {
@@ -37,11 +38,14 @@ const PatientDashboard = () => {
       if (pendingReq && pendingReq.id !== activeReqId) {
         setActiveReqId(pendingReq.id);
         setEscalationTimer(15);
+        setIsActionPending(false);
       } else if (!pendingReq) {
         setActiveReqId(null);
+        setIsActionPending(false);
       }
     } else {
       setActiveReqId(null);
+      setIsActionPending(false);
     }
   }, [requests, activeReqId]);
 
@@ -49,11 +53,11 @@ const PatientDashboard = () => {
     let interval;
     const pendingReq = requests?.find(r => r.status === 'pending');
     
-    if (pendingReq && escalationTimer > 0) {
+    if (pendingReq && escalationTimer > 0 && !isActionPending) {
       interval = setInterval(() => {
         setEscalationTimer(prev => prev - 1);
       }, 1000);
-    } else if (pendingReq && escalationTimer === 0 && !isEscalating) {
+    } else if (pendingReq && escalationTimer === 0 && !isEscalating && !isActionPending) {
       setIsEscalating(true);
       escalateToCaregiver(pendingReq.id).then(() => {
         setIsEscalating(false);
@@ -61,7 +65,7 @@ const PatientDashboard = () => {
     }
 
     return () => clearInterval(interval);
-  }, [requests, escalationTimer, isEscalating]);
+  }, [requests, escalationTimer, isEscalating, isActionPending]);
 
   const openDetails = (log) => {
     setSelectedLog(log);
@@ -70,7 +74,8 @@ const PatientDashboard = () => {
 
   const currentRequest = requests?.find(r => r.status === 'pending');
   const waitingForCaregiver = requests?.find(r => r.status === 'pending_caregiver');
-  const activeTokens = tokens?.filter(t => !t.revoked && t.status !== 'revoked' && t.patient_id === 'patient-42') || [];
+  // Hook already filters tokens by patient_id='patient-42'; just exclude revoked and expired ones.
+  const activeTokens = tokens?.filter(t => !t.revoked && t.status !== 'revoked' && new Date(t.expires_at) > new Date()) || [];
 
   return (
     <div className="flex bg-[#fcfcfd] min-h-screen text-slate-900 font-outfit">
@@ -136,14 +141,22 @@ const PatientDashboard = () => {
 
                   <div className="grid grid-cols-1 gap-4">
                     <button 
-                      onClick={() => approveAsPatient(currentRequest.id)}
-                      className="w-full py-6 bg-emerald-600 text-white hover:bg-emerald-700 rounded-2xl flex items-center justify-center gap-4 text-2xl font-black transition-all shadow-xl shadow-emerald-500/20 uppercase tracking-widest"
+                      disabled={isActionPending}
+                      onClick={() => {
+                        setIsActionPending(true);
+                        approveAsPatient(currentRequest.id);
+                      }}
+                      className="w-full py-6 bg-emerald-600 text-white hover:bg-emerald-700 rounded-2xl flex items-center justify-center gap-4 text-2xl font-black transition-all shadow-xl shadow-emerald-500/20 uppercase tracking-widest disabled:opacity-50"
                     >
                       Authorize
                     </button>
                     <button 
-                      onClick={() => denyRequest(currentRequest.id)}
-                      className="w-full py-6 bg-white text-red-600 border-2 border-red-100 hover:bg-red-50 rounded-2xl flex items-center justify-center gap-4 text-2xl font-black transition-all shadow-md uppercase tracking-widest"
+                      disabled={isActionPending}
+                      onClick={() => {
+                        setIsActionPending(true);
+                        denyRequest(currentRequest.id);
+                      }}
+                      className="w-full py-6 bg-white text-red-600 border-2 border-red-100 hover:bg-red-50 rounded-2xl flex items-center justify-center gap-4 text-2xl font-black transition-all shadow-md uppercase tracking-widest disabled:opacity-50"
                     >
                       Deny
                     </button>
@@ -259,28 +272,101 @@ const PatientDashboard = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
+                  {/* ── Empty state ── */}
+                  {(!logs || logs.length === 0) && (
+                    <tr>
+                      <td colSpan={5} className="px-8 py-16 text-center">
+                        <div className="flex flex-col items-center gap-3 text-slate-400">
+                          <History size={32} className="opacity-30" />
+                          <span className="text-[10px] font-black uppercase tracking-widest">No access events recorded yet</span>
+                          <span className="text-[9px] font-medium text-slate-300">Events will appear here once a clinician requests access</span>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+
+                  {/* ── Log rows ── */}
                   {logs?.map((log, i) => {
-                    const isSuccess = log.decision === 'allow' || log.decision === 'issued';
-                    const isDenied = log.decision === 'deny' || log.decision === 'denied';
-                    const isEscalated = log.id % 2 === 0;
+                    // Extract event states
+                    const isRevoked = log.event_type === 'TOKEN_REVOKED';
+                    const isDenied = log.event_type === 'REQUEST_DENIED' || log.event_type === 'CAREGIVER_DENIED';
+                    const isCaregiverDenied = log.event_type === 'CAREGIVER_DENIED';
+                    const isPatientDenied = log.event_type === 'REQUEST_DENIED';
+                    const isTokenIssued = log.event_type === 'TOKEN_ISSUED';
+                    const isPatientApproval = log.event_type === 'PATIENT_APPROVAL';
+                    const isCaregiverApproval = log.event_type === 'CAREGIVER_APPROVAL';
+                    const isEscalation = log.event_type === 'AUTO_ESCALATION';
+                    const isInitialReq = log.event_type === 'ACCESS_REQUEST';
+
+                    // Set colors and badges
+                    let badgeColor = 'bg-slate-100 text-slate-700 border-slate-200';
+                    let badgeLabel = log.event_type;
+                    let iconColor = 'text-blue-500';
+
+                    if (isRevoked) {
+                      badgeColor = 'bg-rose-100 text-rose-700 border-rose-200';
+                      badgeLabel = 'REVOKED';
+                      iconColor = 'text-rose-500';
+                    } else if (isPatientDenied) {
+                      badgeColor = 'bg-red-100 text-red-700 border-red-200';
+                      badgeLabel = 'DENIED BY PATIENT';
+                      iconColor = 'text-red-500';
+                    } else if (isCaregiverDenied) {
+                      badgeColor = 'bg-red-100 text-red-700 border-red-200';
+                      badgeLabel = 'DENIED BY CAREGIVER';
+                      iconColor = 'text-red-500';
+                    } else if (isTokenIssued) {
+                      badgeColor = 'bg-emerald-100 text-emerald-700 border-emerald-200';
+                      badgeLabel = 'TOKEN ISSUED';
+                      iconColor = 'text-emerald-500';
+                    } else if (isPatientApproval) {
+                      badgeColor = 'bg-teal-100 text-teal-700 border-teal-200';
+                      badgeLabel = 'PATIENT APPROVED';
+                      iconColor = 'text-teal-500';
+                    } else if (isCaregiverApproval) {
+                      badgeColor = 'bg-teal-100 text-teal-700 border-teal-200';
+                      badgeLabel = 'CAREGIVER APPROVED';
+                      iconColor = 'text-teal-500';
+                    } else if (isEscalation) {
+                      badgeColor = 'bg-amber-100 text-amber-700 border-amber-200';
+                      badgeLabel = 'AUTO ESCALATED';
+                      iconColor = 'text-amber-500';
+                    } else if (isInitialReq) {
+                      badgeColor = 'bg-blue-100 text-blue-700 border-blue-200';
+                      badgeLabel = 'ACCESS REQUESTED';
+                      iconColor = 'text-blue-500';
+                    }
+
                     return (
-                      <tr key={i} className="hover:bg-slate-50 transition-all group">
+                      <tr key={log.entry_hash || i} className="hover:bg-slate-50 transition-all group">
                         <td className="px-8 py-6">
                           <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100 group-hover:bg-blue-600 group-hover:text-white transition-all">
-                              <Stethoscope size={20} />
+                            <div className="w-10 h-10 rounded-2xl bg-slate-50 flex items-center justify-center border border-slate-100 group-hover:bg-white group-hover:shadow-sm transition-all">
+                              {isTokenIssued || isPatientApproval || isCaregiverApproval ? (
+                                <ShieldCheck size={20} className={iconColor} />
+                              ) : isDenied || isRevoked ? (
+                                <XCircle size={20} className={iconColor} />
+                              ) : isEscalation ? (
+                                <AlertCircle size={20} className={iconColor} />
+                              ) : (
+                                <Activity size={20} className={iconColor} />
+                              )}
                             </div>
                             <div>
-                              <div className="font-black text-slate-900 text-sm uppercase">{log.requester_id === 'dr_sharma' ? 'Dr. Priya Sharma' : log.requester_id}</div>
-                              <div className="text-[9px] text-slate-400 font-black uppercase tracking-widest mt-0.5">{new Date(log.timestamp).toLocaleTimeString()} UTC</div>
+                              <div className="font-black text-slate-900 text-sm uppercase">
+                                {log.actor_name || log.requester_id}
+                              </div>
+                              <div className="text-[9px] text-slate-400 font-black uppercase tracking-widest mt-0.5">
+                                {log.event_type} &nbsp;·&nbsp; {new Date(log.timestamp).toLocaleString()}
+                              </div>
                             </div>
                           </div>
                         </td>
                         <td className="px-8 py-6">
                            <div className="flex items-center gap-2">
-                             <Workflow size={14} className={isEscalated ? "text-amber-500" : "text-emerald-500"} />
+                             <Workflow size={14} className={isEscalation ? "text-amber-500" : "text-slate-400"} />
                              <span className="text-[11px] font-black uppercase tracking-tight text-slate-600">
-                               {isEscalated ? "Patient → Caregiver" : "Patient Direct"}
+                               {isEscalation || isCaregiverApproval || isCaregiverDenied ? "Patient → Caregiver" : "Patient Direct"}
                              </span>
                            </div>
                         </td>
@@ -289,16 +375,14 @@ const PatientDashboard = () => {
                              <div className="w-6 h-6 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 border border-slate-200">
                                <User size={12} />
                              </div>
-                             <span className="text-[11px] font-black text-slate-600 uppercase">Sanjay</span>
+                             <span className="text-[11px] font-black text-slate-600 uppercase">
+                               {isEscalation ? 'Sanjay (Override)' : 'Sanjay'}
+                             </span>
                            </div>
                         </td>
                         <td className="px-8 py-6">
-                          <span className={`px-4 py-1.5 inline-flex text-[9px] font-black uppercase tracking-widest rounded-full ${
-                            isDenied ? 'bg-red-100 text-red-700 border border-red-200' :
-                            isSuccess ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 
-                            'bg-amber-100 text-amber-700 border border-amber-200'
-                          }`}>
-                            {isDenied ? 'BLOCKED BY USER' : isSuccess ? 'APPROVED' : 'TIMED OUT'}
+                          <span className={`px-4 py-1.5 inline-flex text-[9px] font-black uppercase tracking-widest rounded-full border ${badgeColor}`}>
+                            {badgeLabel}
                           </span>
                         </td>
                         <td className="px-8 py-6 text-center">

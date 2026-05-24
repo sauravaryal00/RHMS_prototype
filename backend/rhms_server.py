@@ -30,7 +30,9 @@ app = FastAPI(title="RHMS Cloud-Ready Backend")
 class ConsentRequest(BaseModel):
     patient_id: str
     clinician_id: str
+    clinician_role: str = "Doctor"
     purpose: str
+    scope: List[str] = ["Heart Rate", "Blood Pressure", "Oxygen Levels"]
     duration_minutes: int = 60
 
 class CarePairRequest(BaseModel):
@@ -106,25 +108,31 @@ async def update_policy(data: dict):
 # Consent API
 @app.post("/consent/issue")
 async def issue_consent(req: ConsentRequest):
-    token_id = str(uuid.uuid4())
-    expiry = (datetime.now() + timedelta(minutes=req.duration_minutes)).isoformat()
+    token_id = f"tok_{uuid.uuid4()}"
+    issued_at = datetime.now().isoformat()
+    expires_at = (datetime.now() + timedelta(minutes=req.duration_minutes)).isoformat()
+    signature = hashlib.sha256(f"{token_id}{req.patient_id}{req.clinician_id}".encode()).hexdigest()[:16]
     
     data = {
         "token_id": token_id,
         "patient_id": req.patient_id,
         "clinician_id": req.clinician_id,
+        "clinician_role": req.clinician_role,
         "purpose": req.purpose,
-        "expiry": expiry,
-        "status": "ACTIVE"
+        "scope": req.scope,
+        "issued_at": issued_at,
+        "expires_at": expires_at,
+        "revoked": False,
+        "signature": signature
     }
     supabase.table("consent_tokens").insert(data).execute()
     
     log_audit(req.patient_id, "ISSUE_CONSENT", "HEALTH_DATA", req.purpose, CURRENT_POLICY_MODE, "SUCCESS", f"Token {token_id} issued")
-    return {"token_id": token_id, "expiry": expiry}
+    return {"token_id": token_id, "expires_at": expires_at}
 
 @app.post("/consent/revoke")
 async def revoke_consent(token_id: str):
-    supabase.table("consent_tokens").update({"status": "REVOKED"}).eq("token_id", token_id).execute()
+    supabase.table("consent_tokens").update({"revoked": True}).eq("token_id", token_id).execute()
     log_audit("SYSTEM", "REVOKE_CONSENT", "HEALTH_DATA", "N/A", CURRENT_POLICY_MODE, "SUCCESS", f"Token {token_id} revoked")
     return {"status": "revoked"}
 
@@ -137,8 +145,8 @@ async def validate_consent(token_id: str):
         log_audit("SYSTEM", "VALIDATE_CONSENT", "HEALTH_DATA", "N/A", CURRENT_POLICY_MODE, "FAILURE", f"Invalid token {token_id}")
         return {"valid": False, "reason": "Invalid token"}
     
-    expiry = datetime.fromisoformat(token['expiry'])
-    if datetime.now() > expiry or token['status'] != "ACTIVE":
+    expiry = datetime.fromisoformat(token['expires_at'].replace("Z", "+00:00"))
+    if datetime.now(expiry.tzinfo) > expiry or token.get('revoked', False):
         log_audit("SYSTEM", "VALIDATE_CONSENT", "HEALTH_DATA", token['purpose'], CURRENT_POLICY_MODE, "FAILURE", f"Token {token_id} expired/revoked")
         return {"valid": False, "reason": "Token expired or revoked"}
     
@@ -207,12 +215,27 @@ async def get_vitals(request: Request, patient_id: str, clinician_id: str, purpo
         if not validation["valid"]:
             raise HTTPException(status_code=403, detail=validation["reason"])
 
+    # Query latest vitals from Supabase for this patient
+    hr, bp, spo2, timestamp = 72, "120/80", 98, datetime.now().isoformat()
+    try:
+        res = supabase.table("vitals").select("*").eq("patient_id", patient_id).order("timestamp", desc=True).limit(1).execute()
+        if res.data:
+            v = res.data[0]
+            hr = v.get("hr", 72)
+            bp_sys = int(v.get("bp_sys", 120))
+            bp_dia = int(v.get("bp_dia", 80))
+            bp = f"{bp_sys}/{bp_dia}"
+            spo2 = v.get("spo2", 98)
+            timestamp = v.get("timestamp", datetime.now().isoformat())
+    except Exception as e:
+        print("Error fetching vitals from Supabase:", e)
+
     latency = (time.time() - start_time) * 1000
     log_audit(clinician_id, "ACCESS_DATA", "VITALS", purpose, CURRENT_POLICY_MODE, "SUCCESS", f"Latency: {latency:.2f}ms")
     
     return {
         "status": "success",
-        "data": {"hr": 72, "bp": "120/80", "spo2": 98, "timestamp": datetime.now().isoformat()},
+        "data": {"hr": hr, "bp": bp, "spo2": spo2, "timestamp": timestamp},
         "metrics": {"latency_ms": latency, "policy_applied": CURRENT_POLICY_MODE}
     }
 

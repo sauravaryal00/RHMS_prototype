@@ -91,6 +91,7 @@ const AuditLogViewer = () => {
               <tbody className="divide-y divide-slate-50">
                 {logs && logs.length > 0 ? logs.map((log, index) => {
                   const logId = log.id || log.event_id || `temp-${index}`;
+                  const isRevoked = log.decision?.toLowerCase() === 'revoked';
                   const isEscalated = log.decision?.toLowerCase().includes('caregiver') || 
                                     log.decision?.toLowerCase().includes('escalate') || 
                                     (typeof logId === 'number' && logId % 2 === 0);
@@ -101,7 +102,7 @@ const AuditLogViewer = () => {
                     <tr key={logId} className="hover:bg-slate-50 transition-all group">
                       <td className="p-6">
                         <div className="font-mono text-xs text-blue-600 font-bold">#REQ-{logId}</div>
-                        <div className="text-[9px] text-slate-400 mt-1">{log.timestamp ? new Date(log.timestamp).toLocaleTimeString() : '---'} UTC</div>
+                        <div className="text-[9px] text-slate-400 mt-1">{log.timestamp ? new Date(log.timestamp).toLocaleString() : '---'}</div>
                       </td>
                       <td className="p-6">
                         <div className="flex items-center gap-2">
@@ -144,11 +145,13 @@ const AuditLogViewer = () => {
                       </td>
                       <td className="p-6">
                         <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${
+                          isRevoked ? 'bg-rose-50 text-rose-700 border-rose-200' :
                           isDenied ? 'bg-red-50 text-red-700 border-red-100' :
                           isApproved ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 
                           'bg-amber-50 text-amber-700 border-amber-100'
                         }`}>
-                          {isDenied ? 'BLOCKED BY USER ❌' : 
+                          {isRevoked ? 'REVOKED 🚫' :
+                           isDenied ? 'BLOCKED BY USER ❌' : 
                            isApproved ? 'APPROVED ✅' : 'TIMED OUT ⚠️'}
                         </span>
                       </td>
