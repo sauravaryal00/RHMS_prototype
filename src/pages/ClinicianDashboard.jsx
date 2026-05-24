@@ -30,7 +30,7 @@ const ClinicianDashboard = () => {
   const [isValidating, setIsValidating] = useState(false);
   const [validationStep, setValidationStep] = useState(0);
   const [patientId, setPatientId] = useState('8270');
-  const [purpose, setPurpose] = useState('Emergency cardiac anomaly detected – clinician review required');
+  const [purpose, setPurpose] = useState('emergency');
   const [duration, setDuration] = useState(30);
   
   // BUG FIX: Pass patientId so the hook server-filters tokens/requests/logs
@@ -160,9 +160,9 @@ const ClinicianDashboard = () => {
                     onChange={(e) => setPurpose(e.target.value)}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 text-sm appearance-none text-slate-800"
                   >
-                    <option value="Emergency cardiac anomaly detected – clinician review required">Emergency cardiac anomaly detected – clinician review required</option>
-                    <option value="Symptom Review">Symptom Review</option>
-                    <option value="Routine Check">Routine Check</option>
+                    <option value="emergency">emergency</option>
+                    <option value="monitoring">monitoring</option>
+                    <option value="routine_check">routine_check</option>
                   </select>
                 </div>
 
