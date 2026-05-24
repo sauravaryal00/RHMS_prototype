@@ -28,7 +28,7 @@ const REAL_METRICS = {
 };
 
 const AdminDashboard = () => {
-  const { history = [], connectionStatus = 'Disconnected' } = useRealtimeVitals('patient-42');
+  const { history = [], connectionStatus = 'Disconnected' } = useRealtimeVitals('8270');
   const { tokens = [] } = useConsentTokens();
   const { avgLatency = 0, securityScore = 98, blockedAttempts = 0, totalRequests = 0 } = useSystemMetrics();
   const [activeMode, setActiveMode] = useState(null);

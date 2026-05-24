@@ -18,12 +18,12 @@ import {
 } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
 import { useConsentTokens } from '../hooks/useConsentTokens';
-// useAuditLogs removed — logs already come from useConsentTokens('patient-42')
+// useAuditLogs removed — logs already come from useConsentTokens('8270')
 import CountdownTimer from '../components/CountdownTimer';
 import LogDetailModal from '../components/LogDetailModal';
 
 const PatientDashboard = () => {
-  const { tokens, requests, logs, approveAsPatient, denyRequest, escalateToCaregiver, revokeToken } = useConsentTokens('patient-42');
+  const { tokens, requests, logs, approveAsPatient, denyRequest, escalateToCaregiver, revokeToken } = useConsentTokens('8270');
   
   const [escalationTimer, setEscalationTimer] = useState(15);
   const [isEscalating, setIsEscalating] = useState(false);
@@ -74,7 +74,7 @@ const PatientDashboard = () => {
 
   const currentRequest = requests?.find(r => r.status === 'pending');
   const waitingForCaregiver = requests?.find(r => r.status === 'pending_caregiver');
-  // Hook already filters tokens by patient_id='patient-42'; just exclude revoked and expired ones.
+  // Hook already filters tokens by patient_id='8270'; just exclude revoked and expired ones.
   const activeTokens = tokens?.filter(t => !t.revoked && t.status !== 'revoked' && new Date(t.expires_at) > new Date()) || [];
 
   return (

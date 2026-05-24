@@ -112,8 +112,8 @@ def init_db():
                         # Add specific patient
                         records.append((f"patient-{raw_pid}", ts, hr, bp_sys, bp_dia, spo2, temp_f, resp, glucose))
                         
-                        # Also duplicate for patient-42
-                        records.append(("patient-42", ts, hr, bp_sys, bp_dia, spo2, temp_f, resp, glucose))
+                        # Also duplicate for 8270
+                        records.append(("8270", ts, hr, bp_sys, bp_dia, spo2, temp_f, resp, glucose))
                     except Exception as e:
                         pass
             

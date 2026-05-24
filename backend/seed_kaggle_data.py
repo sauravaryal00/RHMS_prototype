@@ -81,9 +81,9 @@ def seed_data():
                 }
                 records.append(record)
                 
-                # Also create a duplicate record for demo patient-42 to provide continuous demo data
+                # Also create a duplicate record for demo 8270 to provide continuous demo data
                 record_demo = record.copy()
-                record_demo["patient_id"] = "patient-42"
+                record_demo["patient_id"] = "8270"
                 records.append(record_demo)
                 
             except Exception as e:
@@ -91,10 +91,10 @@ def seed_data():
 
     print(f"Total processed records to insert: {len(records)}")
 
-    # Clear previous entries for patient-42 to keep database clean
-    print("Clearing previous vitals for demo patient-42 from Supabase...")
+    # Clear previous entries for 8270 to keep database clean
+    print("Clearing previous vitals for demo 8270 from Supabase...")
     try:
-        supabase.table("vitals").delete().eq("patient_id", "patient-42").execute()
+        supabase.table("vitals").delete().eq("patient_id", "8270").execute()
     except Exception as e:
         print("Warning: Could not clear previous vitals:", e)
 

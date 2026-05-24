@@ -52,11 +52,14 @@ def stream_data_live():
                     resp = float(row.get("Respiratory_Rate (bpm)", 16)) if "Respiratory_Rate (bpm)" in row else 16
                     glucose = float(row.get("Glucose (mg/dL)", 100)) if "Glucose (mg/dL)" in row else 100
 
+                    # Extract real patient ID from Kaggle, default to 8270 if missing
+                    patient_id = str(row.get("Patient_ID", "8270"))
+
                     # Use CURRENT timestamp so it acts like a live real-time stream
                     current_ts = datetime.now().isoformat() + "+00:00"
 
                     record = {
-                        "patient_id": "patient-42", # Stream to our dashboard's target patient
+                        "patient_id": patient_id, # Stream exactly as in Kaggle
                         "timestamp": current_ts,
                         "hr": hr,
                         "bp_sys": bp_sys,
@@ -67,10 +70,9 @@ def stream_data_live():
                         "glucose": glucose
                     }
 
-                    # Push the live Kaggle data row to Supabase
                     supabase.table("vitals").insert(record).execute()
                     
-                    print(f"[{datetime.now().strftime('%H:%M:%S')}] Pushed Live Kaggle Data -> HR: {hr}, BP: {bp_sys}/{bp_dia}, Temp: {temp_c}°C")
+                    print(f"[{datetime.now().strftime('%H:%M:%S')}] Pushed Live Data for {patient_id} -> HR: {hr}, BP: {bp_sys}/{bp_dia}, Temp: {temp_c}°C")
                     
                     # Wait 2 seconds before pushing the next row
                     time.sleep(2.0)

@@ -134,7 +134,7 @@ export const useConsentTokens = (patientId = null) => {
             id: `log_pat_${req.id}`,
             event_type: 'PATIENT_APPROVAL',
             patient_id: req.patient_id,
-            requester_id: 'patient-42',
+            requester_id: '8270',
             requester_role: 'patient',
             decision: outcome,
             purpose: req.purpose,
@@ -199,7 +199,7 @@ export const useConsentTokens = (patientId = null) => {
             id: `log_rev_${req.id}`,
             event_type: 'TOKEN_REVOKED',
             patient_id: req.patient_id,
-            requester_id: 'patient-42',
+            requester_id: '8270',
             requester_role: 'patient',
             decision: 'revoked',
             purpose: req.purpose,
@@ -224,7 +224,7 @@ export const useConsentTokens = (patientId = null) => {
               id: `log_pat_${req.id}`,
               event_type: 'PATIENT_APPROVAL',
               patient_id: req.patient_id,
-              requester_id: 'patient-42',
+              requester_id: '8270',
               requester_role: 'patient',
               actor_name: 'Patient (You)',
               decision: 'pending_co_approval',
@@ -257,7 +257,7 @@ export const useConsentTokens = (patientId = null) => {
               id: `log_den_${req.id}`,
               event_type: 'REQUEST_DENIED',
               patient_id: req.patient_id,
-              requester_id: 'patient-42',
+              requester_id: '8270',
               requester_role: 'patient',
               actor_name: 'Patient (You)',
               decision: 'deny',
@@ -373,7 +373,7 @@ export const useConsentTokens = (patientId = null) => {
       status: target
     }).eq('id', requestId);
     if (!error) {
-      await logEvent('PATIENT_APPROVAL', req.patient_id, 'patient-42', 'patient', isHR ? 'pending_co_approval' : 'allow', req.purpose, req.scope, {
+      await logEvent('PATIENT_APPROVAL', req.patient_id, '8270', 'patient', isHR ? 'pending_co_approval' : 'allow', req.purpose, req.scope, {
         patient_latency_ms: lat, total_latency_ms: lat
       });
       if (target === 'approved') await issueToken(req, lat);
@@ -443,7 +443,7 @@ export const useConsentTokens = (patientId = null) => {
     }
     
     await supabase.from('access_requests').update(updatePayload).eq('id', requestId);
-    await logEvent('REQUEST_DENIED', req.patient_id, 'patient-42', 'patient', 'deny', req.purpose, req.scope);
+    await logEvent('REQUEST_DENIED', req.patient_id, '8270', 'patient', 'deny', req.purpose, req.scope);
     fetchAll();
   };
 
@@ -496,7 +496,7 @@ export const useConsentTokens = (patientId = null) => {
         id: `log_rev_opt_${Date.now()}`,
         event_type: 'TOKEN_REVOKED',
         patient_id: match.patient_id,
-        requester_id: 'patient-42',
+        requester_id: '8270',
         requester_role: 'patient',
         actor_name: 'Patient (You)',
         decision: 'revoked',
@@ -510,7 +510,7 @@ export const useConsentTokens = (patientId = null) => {
       };
       setLogs(prev => [revokedLogEntry, ...prev]);
 
-      await logEvent('TOKEN_REVOKED', match.patient_id, 'patient-42', 'patient', 'revoked', match.purpose, match.scope, {
+      await logEvent('TOKEN_REVOKED', match.patient_id, '8270', 'patient', 'revoked', match.purpose, match.scope, {
         patient_latency_ms: 21.89, total_latency_ms: 21.89
       });
     }

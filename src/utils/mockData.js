@@ -16,7 +16,7 @@ export const authModes = [
 
 export const mockVitals = {
   device_id: "dev-001",
-  patient_id: "patient-42",
+  patient_id: "8270",
   timestamp: new Date().toISOString(),
   hr: 78,
   bp_sys: 122,
@@ -30,7 +30,7 @@ export const mockVitals = {
 export const mockConsentTokens = [
   {
     token_id: "tok_abc123",
-    patient_id: "patient-42",
+    patient_id: "8270",
     clinician_id: "dr_sharma",
     clinician_role: "cardiologist",
     purpose: "symptom_review",
@@ -47,7 +47,7 @@ export const mockAuditLogs = [
     event_id: 1042,
     timestamp: new Date().toISOString(),
     event_type: "ALLOW",
-    patient_id: "patient-42",
+    patient_id: "8270",
     requester_id: "dr_sharma",
     requester_role: "clinician",
     purpose: "symptom_review",

@@ -29,7 +29,7 @@ const ClinicianDashboard = () => {
   const [isRequesting, setIsRequesting] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
   const [validationStep, setValidationStep] = useState(0);
-  const [patientId, setPatientId] = useState('patient-42');
+  const [patientId, setPatientId] = useState('8270');
   const [purpose, setPurpose] = useState('Emergency cardiac anomaly detected – clinician review required');
   const [duration, setDuration] = useState(30);
   
