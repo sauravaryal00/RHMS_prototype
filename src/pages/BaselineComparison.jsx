@@ -602,9 +602,9 @@ const BaselineComparison = () => {
             <div className="bg-white/5 p-4 rounded-xl">
               <div className="font-bold text-primary mb-1">Performance</div>
               <p className="text-xs text-muted leading-relaxed">
-                RHMS is <strong>{pctFaster(REAL_DATA.lyu2022.tokenIssue, REAL_DATA.rhms.tokenIssue.avg)}% faster</strong> at token
-                issue and <strong>{pctFaster(REAL_DATA.lyu2022.validation, REAL_DATA.rhms.validation.avg)}% faster</strong> at validation
-                than the best comparable system, while enforcing 7 more security conditions per request.
+                RHMS is <strong>{pctFaster(REAL_DATA.lopezMartinez2025.sessionSetup_ms + REAL_DATA.lopezMartinez2025.vcCreate_ms, REAL_DATA.rhms.tokenIssue.avg)}% faster</strong> at token
+                issue and <strong>{pctFaster(REAL_DATA.lopezMartinez2025.perAccessTotal_ms, REAL_DATA.rhms.validation.avg)}% faster</strong> at validation
+                than the best comparable system (López [4]), while enforcing 7 more security conditions per request.
               </p>
             </div>
             <div className="bg-white/5 p-4 rounded-xl">
