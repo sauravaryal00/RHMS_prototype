@@ -25,8 +25,8 @@ const Sidebar = ({ role = 'admin' }) => {
     { name: 'Caregiver Flow', path: '/caregiver', icon: Users, roles: ['caregiver', 'admin'] },
     { name: 'Audit Log', path: '/audit', icon: FileSearch, roles: ['admin', 'clinician'] },
     { name: 'Anomalies', path: '/anomalies', icon: ShieldAlert, roles: ['admin'] },
-    { name: 'Baselines', path: '/baselines', icon: Activity, roles: ['admin'], disabled: true },
-    { name: 'Experiments', path: '/experiments', icon: BarChart3, roles: ['admin'], disabled: true },
+    { name: 'Baselines', path: '/baselines', icon: Activity, roles: ['admin'] },
+    { name: 'Experiments', path: '/experiments', icon: BarChart3, roles: ['admin'] },
     { name: 'Settings', path: '/settings', icon: Settings, roles: ['admin'] },
   ];
 

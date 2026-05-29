@@ -9,11 +9,11 @@ import Sidebar from '../components/Sidebar';
 // ─── All REAL data from our deep_analysis_experiments.py ──────────────────────
 const REAL_DATA = {
   rhms: {
-    tokenIssue:    { avg: 30.78, median: 25.26, p95: 52.85, stdev: 11.88 },
-    validation:    { avg: 16.20, median: 12.86, p95: 31.15 },
-    rejection:     { avg: 11.21, median: 7.75 },
-    revokeToStop:  { avg: 21.89, median: 19.89, max: 35.49 },
-    consentOverhead: 1.55,  // ms above open baseline
+    tokenIssue:    { avg: 17.52, median: 13.88, p95: 36.53, stdev: 8.35 },
+    validation:    { avg: 11.29, median: 9.32, p95: 29.32 },
+    rejection:     { avg: 13.56, median: 14.78 },
+    revokeToStop:  { avg: 13.11, median: 9.57, max: 33.79 },
+    consentOverhead: 0.61,  // ms above open baseline
     auditBytes: 236,
     throughput: 500,
     far: 0,
@@ -22,29 +22,53 @@ const REAL_DATA = {
     securityScore: 98,
     caregiverResolved: '8/8',
   },
-  lyu2022: {
-    tokenIssue: 192,
-    validation: 272,
-    throughput: 180,
-    securityScore: 72,
-    hasPurposeEnforcement: false,
-    hasCaregiverEscalation: false,
-    hasRevocation: false,
-  },
-  husnain2022: {
-    throughput: 230,
-    securityScore: 80,
-    auditBytes: 1200,
-    hasConsentCard: false,
+  // [1] Al Amin et al. 2024 — Ethereum smart contracts
+  alAmin2024: {
+    tokenIssue: null,          // gas cost only, no ms
+    validation: null,          // no wall-clock data
+    throughput: null,
+    hasGasCost: true,
+    hasDataEnforcement: false,
     hasCaregiverEscalation: false,
   },
-  rahman2023: {
-    securityScore: 68,
-    denialRate: 40,
-    hasRevocation: false,
+  // [2] Merlec et al. 2021 — Quorum blockchain + IPFS + VCs
+  merlec2021: {
+    tokenIssue: null,          // no end-to-end issuance ms
+    validation: null,          // no end-to-end access ms
+    consensusOnly_ms: 1.5,     // RAFT consensus layer ONLY
+    throughput_consensus: 1000,// consensus tps only
+    hasGDPROnly: true,
+    hasCaregiverEscalation: false,
+  },
+  // [3] Alhajri et al. 2022 — Permissioned blockchain (SC1+SC2)
+  alhajri2022: {
+    tokenIssue: null,          // no quantitative performance data
+    validation: null,
+    throughput: null,
+    formallyVerified: true,
+    hasClinicalPurpose: false,
+    hasCaregiverEscalation: false,
+  },
+  // [4] López Martínez et al. 2025 — SSI / DIDs / VCs
+  lopezMartinez2025: {
+    vcCreate_ms: 7.24,
+    vcVerify_ms: 1.67,
+    didRead_ms: 11.52,
+    didComm_ms: 5.91,
+    sessionSetup_ms: 113.82,
+    perAccessTotal_ms: 19.10,  // didRead + didComm + vcVerify
+    requiresWallet: true,
+    hasCaregiverEscalation: false,
+  },
+  // [5] Jesus & Pandit 2022 — Consent receipts
+  jesusAndPandit2022: {
+    receiptGen_ms: 1000,       // under 1 second
+    receiptBytes: 1024,        // ~1 KB
+    isEnforcement: false,      // transparency only, not enforcement
     hasCaregiverEscalation: false,
   },
 };
+
 
 // Improvement %
 const pctFaster = (baseline, ours) => Math.round(((baseline - ours) / baseline) * 100);
@@ -54,30 +78,36 @@ const features = [
     category: '🔐 Security Mechanism',
     name: 'Access Control Model',
     values: [
-      'Consent-as-Authentication\n(WHO + WHAT + WHY + HOW LONG)',
-      'Password + OTP\n(Identity-only)',
-      'Blockchain Consensus\n(Node-based)',
-      'Role-Based Access\n(Role-only)',
+      'Consent-as-Auth\n(7 conditions: WHO+WHAT+WHY+WHEN)',
+      'Ethereum Smart Contracts\n(consent provenance)',
+      'Quorum BC + IPFS + VCs\n(eRBAC)',
+      'Dual Smart Contracts\n(SC1+SC2 formal)',
+      'DIDs + VCs + DIDComm\n(SSI wallet)',
+      'Consent Receipts\n(transparency only)',
     ],
   },
   {
     category: '⚡ Performance',
-    name: 'Token/Auth Latency',
+    name: 'Token / VC Issue Latency',
     values: [
       `${REAL_DATA.rhms.tokenIssue.avg} ms avg\n(Median: ${REAL_DATA.rhms.tokenIssue.median} ms)`,
-      `${REAL_DATA.lyu2022.tokenIssue} ms\n(OAuth round-trip)`,
-      'N/A\n(Block finality)',
-      'N/A\n(Session-based)',
+      'Gas cost only\n(no ms reported)',
+      'Consensus layer 1.5 ms\n(NOT end-to-end)',
+      'No data reported\n(formal proof only)',
+      `VC create: ${REAL_DATA.lopezMartinez2025.vcCreate_ms} ms\n(+ 113.82 ms session setup)`,
+      'Not applicable\n(no enforcement)',
     ],
   },
   {
     category: '⚡ Performance',
-    name: 'Validation Overhead',
+    name: 'Per-Access Validation',
     values: [
       `${REAL_DATA.rhms.validation.avg} ms avg\n(P95: ${REAL_DATA.rhms.validation.p95} ms)`,
-      `${REAL_DATA.lyu2022.validation} ms\n(External OAuth call)`,
-      'Not measured',
-      'Not measured',
+      'No data reported',
+      'Consensus only: 1.5 ms\n(full path not measured)',
+      'No data reported',
+      `${REAL_DATA.lopezMartinez2025.perAccessTotal_ms} ms\n(DID+DIDComm+VC verify)`,
+      'Not enforcement\n(receipt gen < 1000 ms)',
     ],
   },
   {
@@ -85,70 +115,74 @@ const features = [
     name: 'Max Throughput',
     values: [
       `${REAL_DATA.rhms.throughput}+ RPS\n(0% drop rate)`,
-      `~${REAL_DATA.lyu2022.throughput} RPS est.`,
-      `${REAL_DATA.husnain2022.throughput} tps (cap)`,
       'Not reported',
+      '1,000 tps consensus\n(not end-to-end)',
+      'Not reported',
+      'Not reported',
+      'Not applicable',
     ],
   },
   {
     category: '🔒 Consent Properties',
-    name: 'Patient Consent Card',
-    values: [true, false, false, false],
+    name: 'Runtime Data Enforcement',
+    values: [true, false, 'Partial', true, true, false],
   },
   {
     category: '🔒 Consent Properties',
-    name: 'Purpose-Bound Tokens',
-    values: [true, false, false, false],
+    name: 'Clinical Purpose Binding',
+    values: [true, 'Partial', true, false, true, false],
   },
   {
     category: '🔒 Consent Properties',
-    name: 'Scope Enforcement (Field-level)',
-    values: [true, false, false, false],
+    name: 'Field-Level Scope (O(1))',
+    values: [true, false, true, false, 'Partial', false],
   },
   {
     category: '🔒 Consent Properties',
-    name: 'Instant Patient Revocation',
-    values: [true, false, false, false],
+    name: 'Instant Revocation',
+    values: [`${REAL_DATA.rhms.revokeToStop.avg} ms avg`, 'Yes (gas cost)', 'Yes', 'Yes (SC1)', 'Yes', false],
   },
   {
-    category: '👴 Elderly Support',
-    name: '15-Second Escalation Trigger',
-    values: [true, false, false, false],
+    category: '👴 Elderly / IoT Support',
+    name: '15-Second Caregiver Escalation',
+    values: [true, false, false, false, false, false],
   },
   {
-    category: '👴 Elderly Support',
-    name: 'Caregiver Escalation (Evaluated)',
-    values: [true, false, false, false],
+    category: '👴 Elderly / IoT Support',
+    name: 'No Wallet / Key Management',
+    values: [true, false, false, false, false, true],
   },
   {
-    category: '📋 Compliance',
-    name: 'Immutable Audit Log',
-    values: [true, false, true, false],
-  },
-  {
-    category: '📋 Compliance',
-    name: 'APP 12 Compliant',
-    values: ['Full', 'Partial', 'Partial', 'Partial'],
+    category: '👴 Elderly / IoT Support',
+    name: 'IoT / RHMS Context',
+    values: [true, false, false, 'Wearables', false, false],
   },
   {
     category: '📋 Compliance',
-    name: 'Audit Storage / Entry',
+    name: 'Audit / Evidence Log',
     values: [
-      `${REAL_DATA.rhms.auditBytes} bytes\n(IoT optimised)`,
-      'N/A',
-      `~${REAL_DATA.husnain2022.auditBytes} bytes\n(Chain overhead)`,
-      'N/A',
+      `Hash-chained\n${REAL_DATA.rhms.auditBytes} B/entry`,
+      'Blockchain provenance',
+      'Blockchain audit',
+      false,
+      'Partial',
+      `Consent receipts\n~1 KB`,
     ],
   },
   {
-    category: '✅ Validation Results',
-    name: 'False Acceptance Rate (FAR)',
-    values: ['0% ✓', 'Not reported', 'Not reported', 'Not reported'],
+    category: '📋 Compliance',
+    name: 'Australian APP Mapped',
+    values: ['Full (APP 3,6,11,12)', false, 'GDPR only', false, false, 'GDPR only'],
   },
   {
     category: '✅ Validation Results',
-    name: 'Denial Rate (5 scenarios)',
-    values: ['100%', 'Not reported', 'Not reported', '40% (partial)'],
+    name: 'False Acceptance Rate',
+    values: ['0% (20/20 blocked)', 'Not reported', 'Not reported', 'Formally proved', 'Not reported', 'Not applicable'],
+  },
+  {
+    category: '✅ Validation Results',
+    name: 'Performance Measured',
+    values: ['Yes — all metrics', 'Gas cost only', 'Consensus layer only', 'None', 'Yes — per-op', 'Partial'],
   },
 ];
 
@@ -165,39 +199,62 @@ const systems = [
     icon: ShieldCheck,
   },
   {
-    id: 'lyu',
-    name: 'Lyu et al. (2022)',
-    subtitle: 'OAuth 2.0 MEC Auth',
+    id: 'alamin',
+    name: 'Al Amin et al. [1]',
+    subtitle: 'Ethereum Smart Contracts',
     color: 'text-success',
     border: 'border-success/50',
     bg: 'bg-success/5',
-    badge: 'BASELINE',
+    badge: 'REF [1] 2024',
     badgeColor: 'bg-success/10 text-success border-success/30',
     icon: Lock,
   },
   {
-    id: 'husnain',
-    name: 'Husnain et al. (2022)',
-    subtitle: 'HealthChain Blockchain',
+    id: 'merlec',
+    name: 'Merlec et al. [2]',
+    subtitle: 'Quorum BC + IPFS + VCs',
     color: 'text-warning',
     border: 'border-warning/50',
     bg: 'bg-warning/5',
-    badge: 'BASELINE',
+    badge: 'REF [2] 2021',
     badgeColor: 'bg-warning/10 text-warning border-warning/30',
     icon: Globe,
   },
   {
-    id: 'rahman',
-    name: 'Rahman et al. (2023)',
-    subtitle: 'RBAC + Logging',
+    id: 'alhajri',
+    name: 'Alhajri et al. [3]',
+    subtitle: 'Permissioned BC (SC1+SC2)',
     color: 'text-danger',
     border: 'border-danger/50',
     bg: 'bg-danger/5',
-    badge: 'BASELINE',
+    badge: 'REF [3] 2022',
     badgeColor: 'bg-danger/10 text-danger border-danger/30',
     icon: Users,
   },
+  {
+    id: 'lopez',
+    name: 'López Martínez et al. [4]',
+    subtitle: 'SSI / DIDs / VCs',
+    color: 'text-purple',
+    border: 'border-purple/50',
+    bg: 'bg-purple/5',
+    badge: 'REF [4] 2025',
+    badgeColor: 'bg-purple/20 text-purple border-purple/30',
+    icon: Zap,
+  },
+  {
+    id: 'jesus',
+    name: 'Jesus & Pandit [5]',
+    subtitle: 'Consent Receipts',
+    color: 'text-teal',
+    border: 'border-teal/50',
+    bg: 'bg-teal/5',
+    badge: 'REF [5] 2022',
+    badgeColor: 'bg-teal/20 text-teal border-teal/30',
+    icon: Activity,
+  },
 ];
+
 
 // Group features by category
 const grouped = features.reduce((acc, f) => {
