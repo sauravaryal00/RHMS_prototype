@@ -85,10 +85,13 @@ async def get_metrics():
 
 @app.get("/system/policy")
 async def get_policy():
-    return {"mode": CURRENT_POLICY_MODE}
+    start_time = time.time()
+    latency_ms = round((time.time() - start_time) * 1000, 3)
+    return {"mode": CURRENT_POLICY_MODE, "latency_ms": latency_ms}
 
 @app.post("/system/policy")
 async def update_policy(data: dict):
+    start_time = time.time()
     global CURRENT_POLICY_MODE
     new_mode = data.get("mode")
     new_ip = data.get("allowed_ip")
@@ -102,12 +105,15 @@ async def update_policy(data: dict):
                 "context_type": "HASHED_IP",
                 "context_value": hashed_ip
             }).execute()
-        return {"status": "success", "mode": CURRENT_POLICY_MODE}
-    return {"status": "error", "message": "Invalid mode"}
+        latency_ms = round((time.time() - start_time) * 1000, 3)
+        return {"status": "success", "mode": CURRENT_POLICY_MODE, "latency_ms": latency_ms}
+    latency_ms = round((time.time() - start_time) * 1000, 3)
+    return {"status": "error", "message": "Invalid mode", "latency_ms": latency_ms}
 
 # Consent API
 @app.post("/consent/issue")
 async def issue_consent(req: ConsentRequest):
+    start_time = time.time()
     token_id = f"tok_{uuid.uuid4()}"
     issued_at = datetime.now().isoformat()
     expires_at = (datetime.now() + timedelta(minutes=req.duration_minutes)).isoformat()
@@ -128,34 +134,42 @@ async def issue_consent(req: ConsentRequest):
     supabase.table("consent_tokens").insert(data).execute()
     
     log_audit(req.patient_id, "ISSUE_CONSENT", "HEALTH_DATA", req.purpose, CURRENT_POLICY_MODE, "SUCCESS", f"Token {token_id} issued")
-    return {"token_id": token_id, "expires_at": expires_at}
+    latency_ms = round((time.time() - start_time) * 1000, 3)
+    return {"token_id": token_id, "expires_at": expires_at, "latency_ms": latency_ms}
 
 @app.post("/consent/revoke")
 async def revoke_consent(token_id: str):
+    start_time = time.time()
     supabase.table("consent_tokens").update({"revoked": True}).eq("token_id", token_id).execute()
     log_audit("SYSTEM", "REVOKE_CONSENT", "HEALTH_DATA", "N/A", CURRENT_POLICY_MODE, "SUCCESS", f"Token {token_id} revoked")
-    return {"status": "revoked"}
+    latency_ms = round((time.time() - start_time) * 1000, 3)
+    return {"status": "revoked", "latency_ms": latency_ms}
 
 @app.get("/consent/validate/{token_id}")
 async def validate_consent(token_id: str):
+    start_time = time.time()
     res = supabase.table("consent_tokens").select("*").eq("token_id", token_id).execute()
     token = res.data[0] if res.data else None
     
     if not token:
         log_audit("SYSTEM", "VALIDATE_CONSENT", "HEALTH_DATA", "N/A", CURRENT_POLICY_MODE, "FAILURE", f"Invalid token {token_id}")
-        return {"valid": False, "reason": "Invalid token"}
+        latency_ms = round((time.time() - start_time) * 1000, 3)
+        return {"valid": False, "reason": "Invalid token", "latency_ms": latency_ms}
     
     expiry = datetime.fromisoformat(token['expires_at'].replace("Z", "+00:00"))
     if datetime.now(expiry.tzinfo) > expiry or token.get('revoked', False):
         log_audit("SYSTEM", "VALIDATE_CONSENT", "HEALTH_DATA", token['purpose'], CURRENT_POLICY_MODE, "FAILURE", f"Token {token_id} expired/revoked")
-        return {"valid": False, "reason": "Token expired or revoked"}
+        latency_ms = round((time.time() - start_time) * 1000, 3)
+        return {"valid": False, "reason": "Token expired or revoked", "latency_ms": latency_ms}
     
     log_audit("SYSTEM", "VALIDATE_CONSENT", "HEALTH_DATA", token['purpose'], CURRENT_POLICY_MODE, "SUCCESS", f"Token {token_id} validated")
-    return {"valid": True, "details": token}
+    latency_ms = round((time.time() - start_time) * 1000, 3)
+    return {"valid": True, "details": token, "latency_ms": latency_ms}
 
 # OTP API
 @app.post("/otp/generate")
 async def generate_otp(req: OTPRequest):
+    start_time = time.time()
     import random
     code = str(random.randint(100000, 999999))
     expiry = (datetime.now() + timedelta(minutes=5)).isoformat()
@@ -168,25 +182,32 @@ async def generate_otp(req: OTPRequest):
     }).execute()
     
     log_audit(req.user_id, "GENERATE_OTP", "AUTH", "LOGIN", CURRENT_POLICY_MODE, "SUCCESS", f"OTP generated: {code}")
-    return {"status": "sent", "code": code, "message": f"[SIMULATION] OTP sent: {code}"}
+    latency_ms = round((time.time() - start_time) * 1000, 3)
+    return {"status": "sent", "code": code, "message": f"[SIMULATION] OTP sent: {code}", "latency_ms": latency_ms}
 
 @app.post("/otp/verify")
 async def verify_otp(req: OTPVerify):
+    start_time = time.time()
     res = supabase.table("otp_codes").select("*").eq("user_id", req.user_id).execute()
     data = res.data[0] if res.data else None
     
-    if not data: return {"valid": False, "reason": "No OTP found"}
+    if not data: 
+        latency_ms = round((time.time() - start_time) * 1000, 3)
+        return {"valid": False, "reason": "No OTP found", "latency_ms": latency_ms}
     
     if datetime.now() > datetime.fromisoformat(data['expiry']):
-        return {"valid": False, "reason": "OTP expired"}
+        latency_ms = round((time.time() - start_time) * 1000, 3)
+        return {"valid": False, "reason": "OTP expired", "latency_ms": latency_ms}
     
     if data['code'] == req.code:
         supabase.table("otp_codes").update({"is_verified": True}).eq("user_id", req.user_id).execute()
         log_audit(req.user_id, "VERIFY_OTP", "AUTH", "LOGIN", CURRENT_POLICY_MODE, "SUCCESS")
-        return {"valid": True}
+        latency_ms = round((time.time() - start_time) * 1000, 3)
+        return {"valid": True, "latency_ms": latency_ms}
     else:
         log_audit(req.user_id, "VERIFY_OTP", "AUTH", "LOGIN", CURRENT_POLICY_MODE, "FAILURE", "Incorrect code")
-        return {"valid": False, "reason": "Incorrect code"}
+        latency_ms = round((time.time() - start_time) * 1000, 3)
+        return {"valid": False, "reason": "Incorrect code", "latency_ms": latency_ms}
 
 # Data Access Gateway
 @app.get("/data/vitals")

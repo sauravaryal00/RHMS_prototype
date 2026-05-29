@@ -29,9 +29,9 @@ const EXPERIMENTS = [
       max: 37.71,
       unit: 'ms',
     },
-    baseline: { label: 'López Martínez et al. (2025)', value: 113.82, unit: 'ms' },
-    improvement: '91% faster',
-    why: 'López Martínez [4] requires a heavy connection session setup (~113.82 ms) and VC creation (~7.24 ms) overhead, whereas RHMS issues tokens directly in-process locally using AES-256-GCM encryption with no external network required.',
+    
+    improvement: 'Sub-20ms Performance',
+    why: 'RHMS issues tokens directly in-process locally using AES-256-GCM encryption with no external network required, achieving extreme performance.',
     perRunData: [36.46,14.95,12.72,12.81,37.70,13.18,32.19,14.33,13.96,13.66,12.43,12.80,12.86,14.43,14.38,26.82,13.59,13.28,13.94,13.82],
   },
   {
@@ -54,9 +54,9 @@ const EXPERIMENTS = [
       max: 30.72,
       unit: 'ms',
     },
-    baseline: { label: 'López Martínez et al. (2025)', value: 19.10, unit: 'ms' },
-    improvement: '96% faster',
-    why: 'The entire security overhead of our consent layer is only ~1.5ms above the open baseline (no-auth). All 7 conditions execute as a single SQL query on a local database. No external calls, no network hops.',
+    
+    improvement: 'Ultra-Low Latency',
+    why: 'All 7 conditions execute as a single optimized query on a local database. No external network hops or distributed consensus delays are required, achieving sub-20ms validation.',
     perRunData: [9.74,9.30,9.99,8.87,9.29,9.06,9.45,8.49,9.33,8.43,10.19,30.71,8.75,8.80,29.24,8.42,9.47,8.54,10.14,9.42],
   },
   {
@@ -79,7 +79,7 @@ const EXPERIMENTS = [
       max: 27.83,
       unit: 'ms',
     },
-    baseline: { label: 'Valid Request Avg', value: 11.29, unit: 'ms' },
+    
     improvement: '0.83× (Equal cost) defense',
     why: 'Invalid tokens are rejected before any database lookup of health data occurs. The gateway\'s "fail-fast" check is extremely fast. This asymmetric defense means attacking RHMS is computationally cheap to defend against.',
     perRunData: [26.59,3.82,25.23,3.06,27.82,15.23,14.85,3.47,26.08,14.69,16.93,15.13,13.89,3.76,27.31,3.32,3.74,3.73,19.15,3.26],
@@ -104,7 +104,7 @@ const EXPERIMENTS = [
       max: 33.79,
       unit: 'ms',
     },
-    baseline: { label: 'Target Threshold', value: 300, unit: 'ms' },
+    
     improvement: '22× below 300ms target',
     why: 'Revocation is immediate because the gateway checks revocation status from the same in-process store that gets updated when the patient taps "Revoke". There is no async propagation delay or cache TTL.',
     perRunData: [33.79,9.61,9.69,8.63,9.52,8.78,24.42,8.62,9.73,8.24],
@@ -131,7 +131,7 @@ const EXPERIMENTS = [
       ],
       unit: 'ms',
     },
-    baseline: { label: 'Acceptable clinical delay', value: 1000, unit: 'ms' },
+    
     improvement: 'Sub-second up to 50 users',
     why: 'The system uses FastAPI\'s async architecture. Each request is stateless and validates its own token locally — no shared lock or blocking. This is why latency grows linearly, not exponentially.',
   },
@@ -156,7 +156,7 @@ const EXPERIMENTS = [
       ],
       unit: 'ms',
     },
-    baseline: null,
+    
     improvement: 'O(1) — No overhead as scope grows',
     why: 'The scope check is a single string comparison in the SQL WHERE clause, not a loop. Adding more approved fields does NOT increase processing time. This proves data minimisation is free — more privacy restrictions cost nothing.',
   },
@@ -179,7 +179,7 @@ const EXPERIMENTS = [
       ],
       unit: 'ms',
     },
-    baseline: { label: 'Open Mode Baseline', value: 16.48, unit: 'ms' },
+    
     improvement: 'Only +1.55ms for full security',
     why: 'The ENTIRE security overhead of our consent-as-authentication model is 1.55 milliseconds above an unprotected baseline. A clinician cannot perceive this. This proves security and usability are not in conflict.',
   },
@@ -204,8 +204,8 @@ const EXPERIMENTS = [
       ],
       unit: 'ms',
     },
-    baseline: { label: 'Husnain et al. cap', value: 230, unit: 'tps' },
-    improvement: '2× more capacity than Husnain (blockchain)',
+    
+    improvement: '100% Success Rate at 500 RPS',
     why: 'RHMS uses a single-threaded SQLite server (worst case prototype). Despite this, ZERO requests were dropped at any load level. In production with PostgreSQL + async workers, throughput would be significantly higher. The blockchain consensus delay in Husnain\'s system creates a hard 230 tps ceiling that RHMS avoids entirely.',
   },
 ];
@@ -234,12 +234,7 @@ const LoadTestResults = () => {
   const [expanded, setExpanded] = useState(null);
   const [activeFilter, setActiveFilter] = useState('all');
 
-  const totalImprovement = {
-    tokenFaster: Math.round(((113.82 - 17.52) / 113.82) * 100),
-    validationFaster: Math.round(((19.1 - 11.29) / 19.1) * 100),
-    ddosRatio: 0.83,
-    revokeMs: 13.11,
-  };
+  
 
   return (
     <div className="flex bg-background min-h-screen text-text-primary font-outfit">
@@ -262,8 +257,8 @@ const LoadTestResults = () => {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
           {[
             { label: 'Experiments Run',      value: '8',      sub: '20 runs each avg', color: 'text-primary' },
-            { label: 'Token Issue vs López [4]',   value: `${totalImprovement.tokenFaster}%`, sub: 'faster (17.52 vs 113.82ms)', color: 'text-success' },
-            { label: 'Validation vs López [4]',    value: `${totalImprovement.validationFaster}%`, sub: 'faster (11.29 vs 19.1ms)', color: 'text-warning' },
+            { label: 'Token Issue Latency', value: '17.52ms', sub: 'avg over 20 runs', color: 'text-success' },
+            { label: 'Validation Latency', value: '11.29ms', sub: 'avg over 20 runs', color: 'text-warning' },
             { label: 'Security (FAR)',        value: '0%',     sub: '100% denial, zero bypasses', color: 'text-danger' },
           ].map((k, i) => (
             <motion.div
@@ -516,15 +511,7 @@ const LoadTestResults = () => {
                     )}
 
                     {/* Baseline comparison */}
-                    {exp.baseline && (
-                      <div className="flex items-center gap-3 mb-6 p-3 bg-white/3 rounded-xl">
-                        <div className="text-[10px] text-muted uppercase tracking-widest shrink-0">vs Baseline:</div>
-                        <div className="font-mono text-xs text-muted">{exp.baseline.label}: {exp.baseline.value} {exp.baseline.unit}</div>
-                        <div className={`ml-auto px-3 py-1 rounded-lg text-xs font-bold ${exp.bgColor} ${exp.color} border ${exp.borderColor}`}>
-                          {exp.improvement}
-                        </div>
-                      </div>
-                    )}
+                    
 
                     {/* Why box */}
                     <div className="p-4 bg-white/3 rounded-xl border border-white/5">
@@ -548,7 +535,7 @@ const LoadTestResults = () => {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
             {[
-              { title: 'Speed', body: 'RHMS is faster at token issue and validation than López Martínez et al. — due to single round-trip architecture vs multiple DID/VC verifications.' },
+              { title: 'Speed', body: 'RHMS issues tokens directly in-process using AES-256-GCM, avoiding any external network setup and achieving sub-20ms latency.' },
               { title: 'Security', body: 'FAR = 0%. Every invalid request rejected. 1.45× faster to block attackers than serve legitimate users — asymmetric DDoS defense.' },
               { title: 'Scalability', body: '100% success rate at 500 RPS. Linear latency growth (not exponential). Revocation works in 21.89ms — well below any perceptible threshold.' },
               { title: 'Privacy', body: 'Scope complexity is O(1) — more data restrictions add zero overhead. Consent mode adds only 1.55ms above no-auth baseline.' },

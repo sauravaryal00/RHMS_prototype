@@ -54,7 +54,7 @@ export const useConsentTokens = (patientId = null) => {
         // Also check if we locally revoked it in localStorage to prevent Supabase RLS rollback
         try {
           const localRevoked = JSON.parse(localStorage.getItem('rhms_local_revoked') || '[]');
-          if (localRevoked.includes(req.id)) {
+          if (localRevoked.includes(req.id) || localRevoked.includes(String(req.id)) || localRevoked.includes(Number(req.id))) {
             currentStatus = 'revoked';
           }
         } catch(e) {}
@@ -99,9 +99,12 @@ export const useConsentTokens = (patientId = null) => {
       const logsTimeline = [];
       
       filteredReqs.forEach(req => {
-        const reqTime = new Date(req.created_at);
+        try {
+          const reqTime = new Date(req.created_at);
+          const safeId = String(req.id || '');
+          const shortId = safeId.substring(0, 8);
         
-        // 1. Access Request Event (always exists)
+          // 1. Access Request Event (always exists)
         logsTimeline.push({
           id: `log_req_${req.id}`,
           event_type: 'ACCESS_REQUEST',
@@ -112,7 +115,7 @@ export const useConsentTokens = (patientId = null) => {
           purpose: req.purpose,
           scope: (req.scope || []).join(', '),
           prev_hash: '0000000000000000',
-          entry_hash: `hash_req_${req.id.substring(0, 8)}`,
+          entry_hash: `hash_req_${shortId}`,
           timestamp: reqTime.toISOString()
         });
 
@@ -131,8 +134,8 @@ export const useConsentTokens = (patientId = null) => {
             decision: 'escalate',
             purpose: req.purpose,
             scope: (req.scope || []).join(', '),
-            prev_hash: `hash_req_${req.id.substring(0, 8)}`,
-            entry_hash: `hash_esc_${req.id.substring(0, 8)}`,
+            prev_hash: `hash_req_${shortId}`,
+            entry_hash: `hash_esc_${shortId}`,
             timestamp: escTime.toISOString()
           });
         } else if (req.status === 'approved' || req.status === 'revoked' || req.status === 'pending_caregiver') {
@@ -147,8 +150,8 @@ export const useConsentTokens = (patientId = null) => {
             decision: outcome,
             purpose: req.purpose,
             scope: (req.scope || []).join(', '),
-            prev_hash: `hash_req_${req.id.substring(0, 8)}`,
-            entry_hash: `hash_pat_${req.id.substring(0, 8)}`,
+            prev_hash: `hash_req_${shortId}`,
+            entry_hash: `hash_pat_${shortId}`,
             timestamp: appTime.toISOString()
           });
         }
@@ -156,7 +159,7 @@ export const useConsentTokens = (patientId = null) => {
         // 3. Caregiver Approval Event (for high risk/escalated approved requests)
         if (isHR && (req.status === 'approved' || req.status === 'revoked')) {
           const cgTime = new Date(reqTime.getTime() + 8000);
-          const prevHash = isEscalated ? `hash_esc_${req.id.substring(0, 8)}` : `hash_pat_${req.id.substring(0, 8)}`;
+          const prevHash = isEscalated ? `hash_esc_${shortId}` : `hash_pat_${shortId}`;
           logsTimeline.push({
             id: `log_cg_${req.id}`,
             event_type: 'CAREGIVER_APPROVAL',
@@ -167,7 +170,7 @@ export const useConsentTokens = (patientId = null) => {
             purpose: req.purpose,
             scope: (req.scope || []).join(', '),
             prev_hash: prevHash,
-            entry_hash: `hash_cg_${req.id.substring(0, 8)}`,
+            entry_hash: `hash_cg_${shortId}`,
             timestamp: cgTime.toISOString()
           });
         }
@@ -175,9 +178,9 @@ export const useConsentTokens = (patientId = null) => {
         // 4. Token Issued Event
         if (req.status === 'approved' || req.status === 'revoked') {
           const issueTime = new Date(reqTime.getTime() + 10000);
-          let prevHash = `hash_pat_${req.id.substring(0, 8)}`;
+          let prevHash = `hash_pat_${shortId}`;
           if (isHR) {
-            prevHash = `hash_cg_${req.id.substring(0, 8)}`;
+            prevHash = `hash_cg_${shortId}`;
           }
           logsTimeline.push({
             id: `log_iss_${req.id}`,
@@ -189,7 +192,7 @@ export const useConsentTokens = (patientId = null) => {
             purpose: req.purpose,
             scope: (req.scope || []).join(', '),
             prev_hash: prevHash,
-            entry_hash: `hash_iss_${req.id.substring(0, 8)}`,
+            entry_hash: `hash_iss_${shortId}`,
             timestamp: issueTime.toISOString()
           });
         }
@@ -197,6 +200,12 @@ export const useConsentTokens = (patientId = null) => {
         // 5. Token Revoked Event
         if (currentStatus === 'revoked') {
           let revokeTime = new Date(reqTime.getTime() + 12000);
+          try {
+            const timesCache = JSON.parse(localStorage.getItem('rhms_local_revoked_times') || '{}');
+            if (timesCache[safeId]) {
+              revokeTime = new Date(timesCache[safeId]);
+            }
+          } catch(e) {}
           if (req.patient_note && req.patient_note.startsWith('revoked_at:')) {
             const parsedTime = req.patient_note.replace('revoked_at:', '');
             if (!isNaN(Date.parse(parsedTime))) {
@@ -212,8 +221,8 @@ export const useConsentTokens = (patientId = null) => {
             decision: 'revoked',
             purpose: req.purpose,
             scope: (req.scope || []).join(', '),
-            prev_hash: `hash_iss_${req.id.substring(0, 8)}`,
-            entry_hash: `hash_rev_${req.id.substring(0, 8)}`,
+            prev_hash: `hash_iss_${shortId}`,
+            entry_hash: `hash_rev_${shortId}`,
             timestamp: revokeTime.toISOString()
           });
         }
@@ -238,8 +247,8 @@ export const useConsentTokens = (patientId = null) => {
               decision: 'pending_co_approval',
               purpose: req.purpose,
               scope: (req.scope || []).join(', '),
-              prev_hash: `hash_req_${req.id.substring(0, 8)}`,
-              entry_hash: `hash_pat_${req.id.substring(0, 8)}`,
+              prev_hash: `hash_req_${shortId}`,
+              entry_hash: `hash_pat_${shortId}`,
               timestamp: appTime.toISOString()
             });
             // Then caregiver denial
@@ -254,8 +263,8 @@ export const useConsentTokens = (patientId = null) => {
               decision: 'caregiver_deny',
               purpose: req.purpose,
               scope: (req.scope || []).join(', '),
-              prev_hash: `hash_pat_${req.id.substring(0, 8)}`,
-              entry_hash: `hash_cgden_${req.id.substring(0, 8)}`,
+              prev_hash: `hash_pat_${shortId}`,
+              entry_hash: `hash_cgden_${shortId}`,
               timestamp: cgDenyTime.toISOString()
             });
           } else {
@@ -271,8 +280,8 @@ export const useConsentTokens = (patientId = null) => {
               decision: 'deny',
               purpose: req.purpose,
               scope: (req.scope || []).join(', '),
-              prev_hash: `hash_req_${req.id.substring(0, 8)}`,
-              entry_hash: `hash_den_${req.id.substring(0, 8)}`,
+              prev_hash: `hash_req_${shortId}`,
+              entry_hash: `hash_den_${shortId}`,
               timestamp: denyTime.toISOString()
             });
           }
@@ -291,8 +300,10 @@ export const useConsentTokens = (patientId = null) => {
         if (cgEntry) cgEntry.actor_name = 'Caregiver (Sanjay)';
         const issEntry = logsTimeline.find(l => l.id === `log_iss_${req.id}`);
         if (issEntry) { issEntry.actor_name = 'System'; issEntry.duration_minutes = req.duration_minutes; }
-        const revEntry = logsTimeline.find(l => l.id === `log_rev_${req.id}`);
+        const revEntry = logsTimeline.find(l => l.id === `log_rev_${safeId}`);
         if (revEntry) revEntry.actor_name = 'Patient (You)';
+        
+        } catch(loopErr) { console.error('Error processing log entry:', loopErr); }
       });
 
       logsTimeline.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
@@ -482,16 +493,21 @@ export const useConsentTokens = (patientId = null) => {
     const revokedTimestamp = new Date().toISOString();
 
     if (requestId) {
-      setOptimisticLocks(prev => ({ ...prev, [requestId]: { status: 'revoked', timestamp: Date.now() } }));
+      setOptimisticLocks(prev => ({ ...prev, [requestId]: { status: 'revoked', timestamp: Date.now() }, [String(requestId)]: { status: 'revoked', timestamp: Date.now() } }));
     }
 
     // Update localStorage for tokens and explicitly track revoked request IDs
     try {
       if (requestId) {
         const localRev = JSON.parse(localStorage.getItem('rhms_local_revoked') || '[]');
-        if (!localRev.includes(requestId)) {
-          localStorage.setItem('rhms_local_revoked', JSON.stringify([...localRev, requestId]));
+        if (!localRev.includes(requestId) && !localRev.includes(String(requestId))) {
+          localStorage.setItem('rhms_local_revoked', JSON.stringify([...localRev, requestId, String(requestId)]));
         }
+        
+        const timesCache = JSON.parse(localStorage.getItem('rhms_local_revoked_times') || '{}');
+        timesCache[requestId] = revokedTimestamp;
+        timesCache[String(requestId)] = revokedTimestamp;
+        localStorage.setItem('rhms_local_revoked_times', JSON.stringify(timesCache));
       }
       
       const stored = localStorage.getItem('rhms_consent_tokens');

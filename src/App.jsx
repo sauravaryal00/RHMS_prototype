@@ -7,7 +7,6 @@ import ClinicianDashboard from './pages/ClinicianDashboard'
 import AuditLogViewer from './pages/AuditLogViewer'
 import CaregiverDashboard from './pages/CaregiverDashboard'
 import AnomalyDetection from './pages/AnomalyDetection'
-import BaselineComparison from './pages/BaselineComparison'
 import LoadTestResults from './pages/LoadTestResults'
 import SystemStatus from './pages/SystemStatus'
 import SecurityTerminal from './pages/SecurityTerminal'
@@ -31,7 +30,6 @@ function App() {
             <Route path="/audit" element={<ProtectedRoute><AuditLogViewer /></ProtectedRoute>} />
             <Route path="/caregiver" element={<ProtectedRoute><CaregiverDashboard /></ProtectedRoute>} />
             <Route path="/anomalies" element={<ProtectedRoute><AnomalyDetection /></ProtectedRoute>} />
-            <Route path="/baselines" element={<ProtectedRoute><BaselineComparison /></ProtectedRoute>} />
             <Route path="/experiments" element={<ProtectedRoute><LoadTestResults /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><SystemStatus /></ProtectedRoute>} />
             

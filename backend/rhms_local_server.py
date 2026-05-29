@@ -165,23 +165,30 @@ def log_audit(user_id, action, resource, purpose, policy_mode, status, details="
 # ─── Policy ───────────────────────────────────────────────────────────────────
 @app.get("/system/policy")
 def get_policy():
-    return POLICY_MODE
+    start_time = time.perf_counter()
+    latency_ms = round((time.perf_counter() - start_time) * 1000, 3)
+    return {"mode": POLICY_MODE["mode"], "latency_ms": latency_ms}
 
 @app.post("/system/policy")
 def set_policy(data: dict):
+    start_time = time.perf_counter()
     mode = data.get("mode", "")
     valid = ["CONSENT_MODE","PASSWORD_OTP_MODE","LOGGING_ONLY_MODE","ZERO_TRUST_MODE"]
     if mode in valid:
         POLICY_MODE["mode"] = mode
-        return {"status": "ok", "mode": mode}
-    return {"status": "error"}
+        latency_ms = round((time.perf_counter() - start_time) * 1000, 3)
+        return {"status": "ok", "mode": mode, "latency_ms": latency_ms}
+    latency_ms = round((time.perf_counter() - start_time) * 1000, 3)
+    return {"status": "error", "latency_ms": latency_ms}
 
 @app.get("/system/audit_count")
 def audit_count():
+    start_time = time.perf_counter()
     conn = get_db()
     n = conn.execute("SELECT COUNT(*) FROM audit_logs").fetchone()[0]
     conn.close()
-    return {"count": n}
+    latency_ms = round((time.perf_counter() - start_time) * 1000, 3)
+    return {"count": n, "latency_ms": latency_ms}
 
 # ─── Consent ──────────────────────────────────────────────────────────────────
 @app.post("/consent/issue")
@@ -351,6 +358,7 @@ def get_vitals(request: Request, patient_id: str, clinician_id: str,
 # ─── OTP ──────────────────────────────────────────────────────────────────────
 @app.post("/otp/generate")
 def generate_otp(req: OTPRequest):
+    start_time = time.perf_counter()
     import random
     code = str(random.randint(100000, 999999))
     expiry = (datetime.now() + timedelta(minutes=5)).isoformat()
@@ -358,24 +366,30 @@ def generate_otp(req: OTPRequest):
     conn.execute("INSERT OR REPLACE INTO otp_codes VALUES (?,?,?,0)", (req.user_id, code, expiry))
     conn.commit()
     conn.close()
-    return {"code": code, "status": "sent"}
+    latency_ms = round((time.perf_counter() - start_time) * 1000, 3)
+    return {"code": code, "status": "sent", "latency_ms": latency_ms}
 
 @app.post("/otp/verify")
 def verify_otp(req: OTPVerify):
+    start_time = time.perf_counter()
     conn = get_db()
     row = conn.execute("SELECT * FROM otp_codes WHERE user_id=?", (req.user_id,)).fetchone()
     conn.close()
     if not row:
-        return {"valid": False}
+        latency_ms = round((time.perf_counter() - start_time) * 1000, 3)
+        return {"valid": False, "latency_ms": latency_ms}
     if datetime.now() > datetime.fromisoformat(row["expiry"]):
-        return {"valid": False, "reason": "expired"}
+        latency_ms = round((time.perf_counter() - start_time) * 1000, 3)
+        return {"valid": False, "reason": "expired", "latency_ms": latency_ms}
     if row["code"] == req.code:
         conn = get_db()
         conn.execute("UPDATE otp_codes SET is_verified=1 WHERE user_id=?", (req.user_id,))
         conn.commit()
         conn.close()
-        return {"valid": True}
-    return {"valid": False, "reason": "wrong code"}
+        latency_ms = round((time.perf_counter() - start_time) * 1000, 3)
+        return {"valid": True, "latency_ms": latency_ms}
+    latency_ms = round((time.perf_counter() - start_time) * 1000, 3)
+    return {"valid": False, "reason": "wrong code", "latency_ms": latency_ms}
 
 if __name__ == "__main__":
     import uvicorn
