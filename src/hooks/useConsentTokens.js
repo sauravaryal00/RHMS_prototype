@@ -51,6 +51,14 @@ export const useConsentTokens = (patientId = null) => {
           currentStatus = activeLocks[req.id].status;
         }
 
+        // Also check if we locally revoked it in localStorage to prevent Supabase RLS rollback
+        try {
+          const localRevoked = JSON.parse(localStorage.getItem('rhms_local_revoked') || '[]');
+          if (localRevoked.includes(req.id)) {
+            currentStatus = 'revoked';
+          }
+        } catch(e) {}
+
         if (currentStatus === 'approved' || currentStatus === 'revoked') {
           const duration = req.duration_minutes || 15;
           const createdTime = new Date(req.created_at).getTime();
@@ -187,7 +195,7 @@ export const useConsentTokens = (patientId = null) => {
         }
 
         // 5. Token Revoked Event
-        if (req.status === 'revoked') {
+        if (currentStatus === 'revoked') {
           let revokeTime = new Date(reqTime.getTime() + 12000);
           if (req.patient_note && req.patient_note.startsWith('revoked_at:')) {
             const parsedTime = req.patient_note.replace('revoked_at:', '');
@@ -477,8 +485,15 @@ export const useConsentTokens = (patientId = null) => {
       setOptimisticLocks(prev => ({ ...prev, [requestId]: { status: 'revoked', timestamp: Date.now() } }));
     }
 
-    // Update localStorage
+    // Update localStorage for tokens and explicitly track revoked request IDs
     try {
+      if (requestId) {
+        const localRev = JSON.parse(localStorage.getItem('rhms_local_revoked') || '[]');
+        if (!localRev.includes(requestId)) {
+          localStorage.setItem('rhms_local_revoked', JSON.stringify([...localRev, requestId]));
+        }
+      }
+      
       const stored = localStorage.getItem('rhms_consent_tokens');
       if (stored) {
         const tokensList = JSON.parse(stored);
