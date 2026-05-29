@@ -46,7 +46,7 @@ const AdminDashboard = () => {
     {
       label: 'Gateway Latency',
       value: `${avgLatency || REAL_METRICS.validationAvg}ms`,
-      sub: `vs Lyu 272ms baseline`,
+      sub: `vs López 19.1ms baseline`,
       icon: Activity, color: 'text-primary', bg: 'bg-primary/10',
     },
     {

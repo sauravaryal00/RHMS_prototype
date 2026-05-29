@@ -290,8 +290,8 @@ const BaselineComparison = () => {
             </div>
             <div className="glass p-4 rounded-2xl text-right border border-primary/20">
               <div className="text-[10px] text-muted uppercase tracking-widest mb-1">RHMS Advantage</div>
-              <div className="text-3xl font-bold text-primary">{pctFaster(REAL_DATA.lyu2022.tokenIssue, REAL_DATA.rhms.tokenIssue.avg)}%</div>
-              <div className="text-xs text-muted">faster token issue vs Lyu</div>
+              <div className="text-3xl font-bold text-primary">{pctFaster(REAL_DATA.lopezMartinez2025.sessionSetup_ms + REAL_DATA.lopezMartinez2025.vcCreate_ms, REAL_DATA.rhms.tokenIssue.avg)}%</div>
+              <div className="text-xs text-muted">faster token issue vs López [4]</div>
             </div>
           </div>
         </header>
@@ -301,12 +301,12 @@ const BaselineComparison = () => {
           {[
             {
               label: 'Token Issue', value: `${REAL_DATA.rhms.tokenIssue.avg} ms`,
-              sub: `vs Lyu 192 ms → ${pctFaster(REAL_DATA.lyu2022.tokenIssue, REAL_DATA.rhms.tokenIssue.avg)}% faster`,
+              sub: `vs López [4] 121.06 ms → ${pctFaster(REAL_DATA.lopezMartinez2025.sessionSetup_ms + REAL_DATA.lopezMartinez2025.vcCreate_ms, REAL_DATA.rhms.tokenIssue.avg)}% faster`,
               color: 'text-primary', icon: Zap
             },
             {
               label: 'Gateway Validation', value: `${REAL_DATA.rhms.validation.avg} ms`,
-              sub: `vs Lyu 272 ms → ${pctFaster(REAL_DATA.lyu2022.validation, REAL_DATA.rhms.validation.avg)}% faster`,
+              sub: `vs López [4] 19.1 ms → ${pctFaster(REAL_DATA.lopezMartinez2025.perAccessTotal_ms, REAL_DATA.rhms.validation.avg)}% faster`,
               color: 'text-success', icon: Activity
             },
             {
@@ -343,16 +343,17 @@ const BaselineComparison = () => {
             <Info size={20} className="text-primary mt-0.5 shrink-0" />
             <div>
               <div className="font-bold text-primary mb-2">
-                💡 Why is RHMS {pctFaster(REAL_DATA.lyu2022.validation, REAL_DATA.rhms.validation.avg)}% faster than Lyu et al.?
+                💡 Why is RHMS {pctFaster(REAL_DATA.lopezMartinez2025.perAccessTotal_ms, REAL_DATA.rhms.validation.avg)}% faster than López Martínez et al. [4]?
               </div>
               <p className="text-sm text-text-primary/80 leading-relaxed">
-                Lyu et al. (2022) uses <strong>OAuth 2.0</strong>, which requires a network call to an external
-                Authorization Server for <em>every</em> token validation request — adding ~150–200 ms of unavoidable
-                network round-trip overhead. <strong>RHMS validates in-process</strong>: the API Gateway performs
-                a single SHA-256 hash comparison against a local SQLite record in <strong>~8–16 ms</strong>.
-                No external server. No network hop. Similarly, Husnain et al. (2022) requires blockchain
-                consensus across nodes, capping throughput at 230 tps. RHMS uses a lightweight hash-chain
-                audit log with no consensus overhead, handling 500+ RPS with zero dropped requests.
+                López Martínez et al. (2025) uses <strong>SSI, DIDs, and Verifiable Credentials</strong>.
+                This requires multiple expensive cryptographic steps for every access: DID document resolution (11.52 ms),
+                DIDComm message handling (5.91 ms), and VC cryptographic verification (1.67 ms), adding up to 19.1 ms.
+                <strong>RHMS validates in-process</strong>: the API Gateway performs a single SHA-256 hash comparison
+                against a local SQLite record in <strong>~11 ms</strong>.
+                No external DLT calls. No DID resolution. Similarly, Merlec et al. [2] requires blockchain
+                consensus across nodes. RHMS uses a lightweight hash-chain audit log with no consensus overhead,
+                handling 500+ RPS with zero dropped requests.
               </p>
             </div>
           </div>
@@ -397,8 +398,8 @@ const BaselineComparison = () => {
               Token Issue Latency (ms) — Lower is Better
             </h3>
             {[
-              { label: 'RHMS (This Work)', value: REAL_DATA.rhms.tokenIssue.avg, color: 'bg-primary', badge: '84% FASTER' },
-              { label: 'Lyu et al. (2022)', value: REAL_DATA.lyu2022.tokenIssue, color: 'bg-success/60', badge: 'BASELINE' },
+              { label: 'RHMS (This Work)', value: REAL_DATA.rhms.tokenIssue.avg, color: 'bg-primary', badge: 'FASTER' },
+              { label: 'López Martínez [4]', value: 121.06, color: 'bg-warning/60', badge: 'BASELINE' },
             ].map((item, i) => (
               <div key={i} className="mb-4">
                 <div className="flex justify-between text-xs mb-1">
@@ -410,7 +411,7 @@ const BaselineComparison = () => {
                 <div className="h-5 bg-white/5 rounded-lg overflow-hidden">
                   <motion.div
                     initial={{ width: 0 }}
-                    animate={{ width: `${(item.value / 200) * 100}%` }}
+                    animate={{ width: `${(item.value / 150) * 100}%` }}
                     transition={{ duration: 1, delay: i * 0.2 }}
                     className={`h-full ${item.color} rounded-lg`}
                   />
@@ -418,7 +419,7 @@ const BaselineComparison = () => {
               </div>
             ))}
             <div className="text-[10px] text-muted mt-2 italic">
-              * RHMS: in-process SHA-256 lookup. Lyu: OAuth2 external server round-trip.
+              * RHMS: in-process local AES-256-GCM. López [4]: Session setup (113.82ms) + VC Create (7.24ms).
             </div>
           </div>
 
@@ -429,8 +430,8 @@ const BaselineComparison = () => {
               Gateway Validation Latency (ms) — Lower is Better
             </h3>
             {[
-              { label: 'RHMS (This Work)', value: REAL_DATA.rhms.validation.avg, color: 'bg-success', badge: '94% FASTER' },
-              { label: 'Lyu et al. (2022)', value: REAL_DATA.lyu2022.validation, color: 'bg-danger/60', badge: 'BASELINE' },
+              { label: 'RHMS (This Work)', value: REAL_DATA.rhms.validation.avg, color: 'bg-success', badge: 'FASTER' },
+              { label: 'López Martínez [4]', value: REAL_DATA.lopezMartinez2025.perAccessTotal_ms, color: 'bg-danger/60', badge: 'BASELINE' },
             ].map((item, i) => (
               <div key={i} className="mb-4">
                 <div className="flex justify-between text-xs mb-1">
@@ -442,7 +443,7 @@ const BaselineComparison = () => {
                 <div className="h-5 bg-white/5 rounded-lg overflow-hidden">
                   <motion.div
                     initial={{ width: 0 }}
-                    animate={{ width: `${(item.value / 290) * 100}%` }}
+                    animate={{ width: `${(item.value / 30) * 100}%` }}
                     transition={{ duration: 1, delay: i * 0.2 }}
                     className={`h-full ${item.color} rounded-lg`}
                   />
@@ -450,7 +451,7 @@ const BaselineComparison = () => {
               </div>
             ))}
             <div className="text-[10px] text-muted mt-2 italic">
-              * RHMS: 7-condition local SQL check. Lyu: OAuth token introspection via network.
+              * RHMS: 7-condition local SQL check. López [4]: DID Resolution + DIDComm + VC Validation.
             </div>
           </div>
         </div>
@@ -465,7 +466,7 @@ const BaselineComparison = () => {
             {[
               { label: 'RHMS', value: 500, max: 550, color: 'bg-primary', note: '0% drop rate' },
               { label: 'Husnain (Blockchain)', value: 230, max: 550, color: 'bg-warning/60', note: 'Consensus cap' },
-              { label: 'Lyu (OAuth)', value: 180, max: 550, color: 'bg-success/40', note: 'Estimated' },
+              { label: 'Merlec (RAFT)', value: 1000, max: 1200, color: 'bg-success/40', note: 'Consensus Only' },
             ].map((item, i) => (
               <div key={i} className="mb-3">
                 <div className="flex justify-between text-[11px] mb-1">

@@ -29,9 +29,9 @@ const EXPERIMENTS = [
       max: 37.71,
       unit: 'ms',
     },
-    baseline: { label: 'Lyu et al. (2022)', value: 192, unit: 'ms' },
+    baseline: { label: 'López Martínez et al. (2025)', value: 113.82, unit: 'ms' },
     improvement: '91% faster',
-    why: 'Lyu et al. uses OAuth 2.0 — every token requires a call to an external Authorization Server (~150-200ms network overhead). RHMS generates tokens in-process using AES-256-GCM encryption + SHA-256 hashing on a local database — no network needed.',
+    why: 'López Martínez [4] requires a heavy connection session setup (~113.82 ms) and VC creation (~7.24 ms) overhead, whereas RHMS issues tokens directly in-process locally using AES-256-GCM encryption with no external network required.',
     perRunData: [36.46,14.95,12.72,12.81,37.70,13.18,32.19,14.33,13.96,13.66,12.43,12.80,12.86,14.43,14.38,26.82,13.59,13.28,13.94,13.82],
   },
   {
@@ -54,7 +54,7 @@ const EXPERIMENTS = [
       max: 30.72,
       unit: 'ms',
     },
-    baseline: { label: 'Lyu et al. (2022)', value: 272, unit: 'ms' },
+    baseline: { label: 'López Martínez et al. (2025)', value: 19.10, unit: 'ms' },
     improvement: '96% faster',
     why: 'The entire security overhead of our consent layer is only ~1.5ms above the open baseline (no-auth). All 7 conditions execute as a single SQL query on a local database. No external calls, no network hops.',
     perRunData: [9.74,9.30,9.99,8.87,9.29,9.06,9.45,8.49,9.33,8.43,10.19,30.71,8.75,8.80,29.24,8.42,9.47,8.54,10.14,9.42],
@@ -235,8 +235,8 @@ const LoadTestResults = () => {
   const [activeFilter, setActiveFilter] = useState('all');
 
   const totalImprovement = {
-    tokenFaster: Math.round(((192 - 17.52) / 192) * 100),
-    validationFaster: Math.round(((272 - 11.29) / 272) * 100),
+    tokenFaster: Math.round(((113.82 - 17.52) / 113.82) * 100),
+    validationFaster: Math.round(((19.1 - 11.29) / 19.1) * 100),
     ddosRatio: 0.83,
     revokeMs: 13.11,
   };
@@ -262,8 +262,8 @@ const LoadTestResults = () => {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
           {[
             { label: 'Experiments Run',      value: '8',      sub: '20 runs each avg', color: 'text-primary' },
-            { label: 'Token Issue vs Lyu',   value: `${totalImprovement.tokenFaster}%`, sub: 'faster (30.78 vs 192ms)', color: 'text-success' },
-            { label: 'Validation vs Lyu',    value: `${totalImprovement.validationFaster}%`, sub: 'faster (16.2 vs 272ms)', color: 'text-warning' },
+            { label: 'Token Issue vs López [4]',   value: `${totalImprovement.tokenFaster}%`, sub: 'faster (17.52 vs 113.82ms)', color: 'text-success' },
+            { label: 'Validation vs López [4]',    value: `${totalImprovement.validationFaster}%`, sub: 'faster (11.29 vs 19.1ms)', color: 'text-warning' },
             { label: 'Security (FAR)',        value: '0%',     sub: '100% denial, zero bypasses', color: 'text-danger' },
           ].map((k, i) => (
             <motion.div
@@ -548,7 +548,7 @@ const LoadTestResults = () => {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
             {[
-              { title: 'Speed', body: 'RHMS is 84% faster at token issue and 94% faster at validation than Lyu et al. — due to in-process architecture vs OAuth external server.' },
+              { title: 'Speed', body: 'RHMS is faster at token issue and validation than López Martínez et al. — due to single round-trip architecture vs multiple DID/VC verifications.' },
               { title: 'Security', body: 'FAR = 0%. Every invalid request rejected. 1.45× faster to block attackers than serve legitimate users — asymmetric DDoS defense.' },
               { title: 'Scalability', body: '100% success rate at 500 RPS. Linear latency growth (not exponential). Revocation works in 21.89ms — well below any perceptible threshold.' },
               { title: 'Privacy', body: 'Scope complexity is O(1) — more data restrictions add zero overhead. Consent mode adds only 1.55ms above no-auth baseline.' },

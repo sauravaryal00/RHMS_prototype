@@ -39,8 +39,8 @@ const COMPONENTS = [
   {
     category: 'Experiments & Validation',
     items: [
-      { name: 'EXP-A: Token Issue Latency',   status: 'Done ✓',   progress: 100, health: 'green', note: 'Avg 30.78ms (Lyu: 192ms)' },
-      { name: 'EXP-B: Gateway Validation',    status: 'Done ✓',   progress: 100, health: 'green', note: 'Avg 16.20ms (Lyu: 272ms)' },
+      { name: 'EXP-A: Token Issue Latency',   status: 'Done ✓',   progress: 100, health: 'green', note: 'Avg 17.52ms (López [4]: 113.82ms session)' },
+      { name: 'EXP-B: Gateway Validation',    status: 'Done ✓',   progress: 100, health: 'green', note: 'Avg 11.29ms (López [4]: 19.1ms access)' },
       { name: 'EXP-C: DDoS Fail-Fast',        status: 'Done ✓',   progress: 100, health: 'green', note: '1.45× faster to block' },
       { name: 'EXP-D: Revoke-to-Stop',        status: 'Done ✓',   progress: 100, health: 'green', note: 'Avg 21.89ms (first ever)' },
       { name: 'EXP-E: Concurrency (1-50)',     status: 'Done ✓',   progress: 100, health: 'green', note: 'Sub-second up to 50 users' },
@@ -84,8 +84,8 @@ const SystemStatus = () => {
 
   // Key metrics summary
   const keyMetrics = [
-    { label: 'Token Issue',       value: '30.78ms',  sub: 'vs Lyu 192ms', color: 'text-primary' },
-    { label: 'Validation',        value: '16.20ms',  sub: 'vs Lyu 272ms', color: 'text-success' },
+    { label: 'Token Issue',       value: '17.52ms',  sub: 'in-process DB', color: 'text-primary' },
+    { label: 'Validation',        value: '11.29ms',  sub: 'vs López 19.1ms', color: 'text-success' },
     { label: 'FAR',               value: '0%',       sub: '100 requests tested', color: 'text-warning' },
     { label: 'Revoke-to-Stop',    value: '21.89ms',  sub: 'All <36ms', color: 'text-purple-400' },
     { label: 'DDoS Ratio',        value: '1.45×',    sub: 'faster to block', color: 'text-danger' },
