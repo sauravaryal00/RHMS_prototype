@@ -262,11 +262,23 @@ const ClinicianDashboard = () => {
                       <p className="text-sm text-slate-500">Patient: Saurav Aryal (42) | Device: DEV-001</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">Token Expiry</div>
-                    <div className="px-4 py-2 bg-amber-50 text-amber-700 border border-amber-200 rounded-xl font-mono font-bold">
-                      <CountdownTimer expiryDate={activeToken?.expires_at} />
+                  <div className="text-right flex flex-col items-end gap-2">
+                    <div>
+                      <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">Token Expiry</div>
+                      <div className="px-4 py-2 bg-amber-50 text-amber-700 border border-amber-200 rounded-xl font-mono font-bold inline-block">
+                        <CountdownTimer expiryDate={activeToken?.expires_at} />
+                      </div>
                     </div>
+                    <button 
+                      onClick={() => {
+                        alert('CRITICAL: Token Theft Simulated! Interception protocols engaged.');
+                        window.location.href = '/interception';
+                      }}
+                      className="px-4 py-2 bg-red-600 text-white hover:bg-red-700 rounded-xl text-xs font-bold uppercase tracking-widest transition-all shadow-lg flex items-center gap-2 mt-2"
+                    >
+                      <AlertCircle size={14} />
+                      Simulate Token Theft
+                    </button>
                   </div>
                 </div>
 

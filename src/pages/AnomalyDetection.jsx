@@ -230,7 +230,7 @@ const AnomalyDetection = () => {
   const triggerTemplates = [
     { id: 't1', category: 'Behavioral', name: 'Brute Force Login', baseRisk: 8.5, type: 'auth_brute', suggestedCommand: './hydra -l dr_sharma -P /wordlists/rockyou.txt ssh://rhms-gateway' },
     { id: 't2', category: 'Spatial', name: 'Foreign IP Access', baseRisk: 9.1, type: 'geo_anomaly', suggestedCommand: 'proxychains4 curl -X POST https://rhms-api/login' },
-    { id: 't3', category: 'Temporal', name: 'Expired Token Replay', baseRisk: 7.8, type: 'token_replay', suggestedCommand: 'curl -H "Authorization: Bearer $EXPIRED_JWT" https://rhms-api/vitals' },
+    { id: 't3', category: 'Temporal', name: 'Stolen Token Interception', baseRisk: 7.8, type: 'token_replay', suggestedCommand: 'curl -H "Authorization: Bearer $STOLEN_JWT" https://rhms-api/vitals' },
     { id: 't4', category: 'Contextual', name: 'Scope Creep', baseRisk: 8.9, type: 'scope_creep', suggestedCommand: 'python3 exploit_scope.py --target 8270 --fetch psych_notes' },
     { id: 't5', category: 'Contextual', name: 'Unregistered Device', baseRisk: 7.2, type: 'device_anomaly', suggestedCommand: 'curl -A "Mobile Safari (iPad)" https://rhms-api/dashboard' },
     { id: 't6', category: 'Clinical', name: 'Cardiac Arrest Spike', baseRisk: 9.9, type: 'clinical_spike', suggestedCommand: './inject_sensor_data.sh --patient 42 --hr 168' }

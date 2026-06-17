@@ -34,7 +34,7 @@ const AdminDashboard = () => {
   const [activeMode, setActiveMode] = useState(null);
   const [modeMsg, setModeMsg] = useState('');
 
-  const activeTokens = tokens?.filter(t => !t.revoked).length || 0;
+  const activeTokens = tokens?.filter(t => !t.revoked)?.length || 0;
 
   const stats = [
     {

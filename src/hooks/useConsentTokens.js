@@ -65,7 +65,7 @@ export const useConsentTokens = (patientId = null) => {
           const expiresAt = new Date(createdTime + duration * 60 * 1000).toISOString();
           
           reconstructedTokens.push({
-            token_id: `tok_${req.id.substring(0, 8)}`,
+            token_id: `tok_${String(req.id).substring(0, 8)}`,
             patient_id: req.patient_id,
             clinician_id: req.clinician_id,
             clinician_role: req.clinician_role || 'Clinician',
@@ -423,7 +423,7 @@ export const useConsentTokens = (patientId = null) => {
   const issueToken = async (req, total_lat = null) => {
     const exp = new Date(Date.now() + req.duration_minutes * 60 * 1000).toISOString();
     const tokenPayload = {
-      token_id: `tok_${req.id.substring(0, 8)}`,
+      token_id: `tok_${String(req.id).substring(0, 8)}`,
       patient_id: req.patient_id, clinician_id: req.clinician_id, clinician_role: req.clinician_role,
       purpose: req.purpose, scope: req.scope, issued_at: new Date().toISOString(),
       expires_at: exp, revoked: false, signature: 'sig_mock', request_id: req.id

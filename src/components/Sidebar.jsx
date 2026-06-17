@@ -24,7 +24,7 @@ const Sidebar = ({ role = 'admin' }) => {
     { name: 'Clinician Portal', path: '/clinician', icon: Stethoscope, roles: ['clinician', 'admin'] },
     { name: 'Caregiver Flow', path: '/caregiver', icon: Users, roles: ['caregiver', 'admin'] },
     { name: 'Audit Log', path: '/audit', icon: FileSearch, roles: ['admin', 'clinician'] },
-    { name: 'Anomalies', path: '/anomalies', icon: ShieldAlert, roles: ['admin'] },
+    { name: 'Anomalies', path: '/interception', icon: ShieldAlert, roles: ['admin'] },
     { name: 'Experiments', path: '/experiments', icon: BarChart3, roles: ['admin'] },
     { name: 'Settings', path: '/settings', icon: Settings, roles: ['admin'] },
   ];

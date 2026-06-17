@@ -10,7 +10,7 @@ import AnomalyDetection from './pages/AnomalyDetection'
 import LoadTestResults from './pages/LoadTestResults'
 import SystemStatus from './pages/SystemStatus'
 import SecurityTerminal from './pages/SecurityTerminal'
-
+import SecurityMonitoringDashboard from './pages/SecurityMonitoringDashboard'
 import { AuthProvider } from './context/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 
@@ -29,7 +29,7 @@ function App() {
             <Route path="/clinician" element={<ProtectedRoute><ClinicianDashboard /></ProtectedRoute>} />
             <Route path="/audit" element={<ProtectedRoute><AuditLogViewer /></ProtectedRoute>} />
             <Route path="/caregiver" element={<ProtectedRoute><CaregiverDashboard /></ProtectedRoute>} />
-            <Route path="/anomalies" element={<ProtectedRoute><AnomalyDetection /></ProtectedRoute>} />
+            <Route path="/interception" element={<ProtectedRoute><SecurityMonitoringDashboard /></ProtectedRoute>} />
             <Route path="/experiments" element={<ProtectedRoute><LoadTestResults /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><SystemStatus /></ProtectedRoute>} />
             
