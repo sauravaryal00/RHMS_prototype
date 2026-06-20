@@ -30,6 +30,7 @@ function App() {
             <Route path="/audit" element={<ProtectedRoute><AuditLogViewer /></ProtectedRoute>} />
             <Route path="/caregiver" element={<ProtectedRoute><CaregiverDashboard /></ProtectedRoute>} />
             <Route path="/interception" element={<ProtectedRoute><SecurityMonitoringDashboard /></ProtectedRoute>} />
+            <Route path="/anomaly" element={<ProtectedRoute><AnomalyDetection /></ProtectedRoute>} />
             <Route path="/experiments" element={<ProtectedRoute><LoadTestResults /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><SystemStatus /></ProtectedRoute>} />
             

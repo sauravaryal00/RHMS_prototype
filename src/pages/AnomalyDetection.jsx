@@ -335,7 +335,7 @@ const AnomalyDetection = () => {
     <div className="flex min-h-screen bg-slate-50 text-slate-800 font-sans selection:bg-blue-100 relative">
       <Sidebar role="admin" />
       
-      <main className="flex-1 ml-64 p-8 max-w-7xl mx-auto flex flex-col h-screen overflow-hidden">
+      <main className="flex-1 ml-64 p-8 w-full flex flex-col h-screen overflow-hidden">
         
         {/* REFINED SLEEK HEADER */}
         <header className="mb-8 flex justify-between items-center shrink-0 bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
